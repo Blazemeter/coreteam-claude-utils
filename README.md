@@ -37,17 +37,14 @@ To verify:
 
 ## Loading a plugin change after developing it
 
-Skills/commands/agents/hooks are auto-discovered from each plugin's directory — adding one needs **no** manifest registration. But the installed-plugin cache is **keyed by version number** (`~/.claude/plugins/cache/claude-base/<plugin>/<version>/`), so a change that doesn't bump the version never reaches anyone who already has the plugin installed — they keep loading the stale cached version.
+Inside Claude Code:
 
-- **Every change that touches a skill/command/agent/hook must bump `version`** in that plugin's `.claude-plugin/plugin.json` (and keep the matching entry in the top-level `.claude-plugin/marketplace.json` in sync — a mismatch trips a `validate.py` warning).
-- **To pick up the new version, the upgrade flow is two commands — not `/plugin install`:**
+```text
+/plugin marketplace update claude-base    # re-fetches the cache at the new version
+/reload-plugins                           # reloads the running session
+```
 
-  ```text
-  /plugin marketplace update claude-base    # upgrades the installed plugin to the new version (re-fetches the cache)
-  /reload-plugins                           # reloads the running session (or fully restart Claude Code)
-  ```
-
-  `/plugin install <plugin>@claude-base` is a **no-op once installed** — it checks by name, not version, and just reports "already installed globally." Use `marketplace update`, not `install`, to upgrade.
+Bump `version` in the plugin's `plugin.json` first — the cache is keyed by version, and `/plugin install` is a no-op once installed, so it won't pick up the change.
 
 ## What's inside
 
