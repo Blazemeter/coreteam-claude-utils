@@ -1,8 +1,8 @@
 {
   "name": "dep-remediation",
-  "description": "Discipline and per-stack recipes for fixing vulnerable dependencies — fix the direct dep/BOM never the transitive, cross-check advisories, defer breaking majors, and build+test locally. Reusable by any remediation or dep-bump flow (php-composer, gradle-springboot, maven-springboot).",
-  "version": "0.1.1",
+  "description": "Discipline and per-stack recipes for fixing vulnerable dependencies — fix the direct dep/BOM never the transitive, cross-check advisories, defer breaking majors, and build+test locally. Reusable by any remediation or dep-bump flow (php-composer, gradle-springboot, maven-springboot, pip).",
+  "version": "0.2.0",
   "author": { "name": "Tehila" },
   "license": "MIT",
-  "keywords": ["dependencies", "remediation", "cve", "composer", "gradle", "maven", "spring-boot", "bom"]
+  "keywords": ["dependencies", "remediation", "cve", "composer", "gradle", "maven", "spring-boot", "bom", "pip"]
 }

@@ -1,6 +1,6 @@
 ---
 name: dep-remediation
-description: Fix vulnerable dependencies correctly — the golden rule (bump the direct dependency / BOM, never pin the transitive), cross-check the fix version against ecosystem advisories, defer breaking-major upgrades, and compile + unit-test locally before pushing. Load for any dependency remediation or version-bump work in php-composer, gradle-springboot, or maven-springboot projects.
+description: Fix vulnerable dependencies correctly — the golden rule (bump the direct dependency / BOM, never pin the transitive), cross-check the fix version against ecosystem advisories, defer breaking-major upgrades, and compile + unit-test locally before pushing. Load for any dependency remediation or version-bump work in php-composer, gradle-springboot, maven-springboot, or pip projects.
 ---
 
 # Golden rule — fix the DIRECT dependency, never the transitive
@@ -48,6 +48,18 @@ not fixed here.
 - BOM-managed transitive → **bump `<spring-boot.version>`** in `pom.xml` (the BOM), *not* individual `<spring-framework.version>` / `<micrometer.version>` overrides; a genuinely direct dep → bump its `<version>`. Verify with `mvn -q dependency:tree`.
 - **Local build + test (pre-push):** `mvn -q -B verify`.
 - **Repo note:** Blazemeter builds don't use `aws-nexus` (unrelated machine-global mirror). Let the repo's own build config resolve deps — don't inject a Nexus.
+
+## `pip`
+- No BOM concept in pip — bump the **direct dependency**'s pin. For a vulnerable transitive, bump
+  the direct package that pulls it in (same golden rule: never pin the transitive directly).
+- Pin location varies by repo: `requirements.txt` (`pkg==x.y.z`) is the common case; some repos pin
+  in `setup.py`'s `install_requires` or `setup.cfg` instead — bump wherever the version is actually
+  pinned. Regenerate any lock file the repo uses (e.g. `pip-compile`) if present.
+- **Cross-check:** `pip-audit` (falls back to `safety check` if `pip-audit` isn't available) — Mend's
+  suggested version may itself be under advisory on PyPI/OSV.
+- **Local build + test (pre-push):** `pip install -r requirements.txt -r test-requirements.txt` (adjust
+  filenames per repo) then `pytest`. Prefer the repo's own `Makefile`/CI target if one exists (e.g.
+  `make test`) over calling `pytest` directly, so local runs match what CI actually runs.
 
 # Local build+test discipline
 
