@@ -1,16 +1,26 @@
 ---
 name: dep-remediation
-description: Fix vulnerable dependencies correctly — the golden rule (bump the direct dependency / BOM, never pin the transitive), cross-check the fix version against ecosystem advisories, defer breaking-major upgrades, and compile + unit-test locally before pushing. Load for any dependency remediation or version-bump work in php-composer, gradle-springboot, or maven-springboot projects.
+description: Fix vulnerable dependencies correctly — the golden rule (bump the direct dependency / BOM, never pin the transitive), cross-check the fix version against ecosystem advisories, defer breaking-major upgrades, and compile + unit-test locally before pushing. Load for any dependency remediation or version-bump work in php-composer, gradle-springboot, maven-springboot, pip, or npm projects.
 ---
 
 # Golden rule — fix the DIRECT dependency, never the transitive
 
-If a vulnerable library **Y** is pulled in by a direct dependency **X**, bump **X** so it resolves a
-fixed **Y**. Do **not** pin/override the transitive **Y** directly. For BOM-managed transitives
-(Spring Framework, micrometer, logback, jackson under Spring Boot), bump the **Spring Boot BOM
-version** — the one dep that brings them all — *not* individual `<spring-framework.version>` /
-`<micrometer.version>` overrides. If no direct-dep / BOM bump resolves the alert, **defer and note
-it** — never pin the transitive.
+Applies the same way across **every** ecosystem this skill covers — php-composer, gradle-springboot,
+maven-springboot, pip, npm: if a vulnerable library **Y** is pulled in by a direct dependency **X**,
+bump **X** so it resolves a fixed **Y**. Do **not** pin/override the transitive **Y** directly — no
+matter which ecosystem-specific mechanism would make that easy (a Maven/Gradle explicit version
+override, npm's `overrides`/`resolutions`, a pip line pinning the transitive package directly). If
+no direct-dep bump resolves the alert, **defer and note it** — never pin the transitive as a
+workaround.
+
+**BOM-managed transitives are a special case of the same rule, not a different one.** Under Spring
+Boot (`gradle-springboot`, `maven-springboot`), several transitives (Spring Framework, micrometer,
+logback, jackson) are version-pinned by the **Spring Boot BOM** — the one dependency that brings
+them all — so "the direct dependency" for those is the **BOM version**, not the individual
+transitive's own `<spring-framework.version>` / `<micrometer.version>` override. Ecosystems with no
+BOM concept (`pip`, `npm`, `php-composer`) don't have this special case at all — there, "the direct
+dependency" is simply whichever direct entry in the manifest pulls in the vulnerable transitive; see
+the per-stack recipe below for exactly where that's pinned in each.
 
 Two more non-negotiables:
 - **Cross-check the fix version against the ecosystem advisory DB.** Mend's suggested version may
@@ -48,6 +58,46 @@ not fixed here.
 - BOM-managed transitive → **bump `<spring-boot.version>`** in `pom.xml` (the BOM), *not* individual `<spring-framework.version>` / `<micrometer.version>` overrides; a genuinely direct dep → bump its `<version>`. Verify with `mvn -q dependency:tree`.
 - **Local build + test (pre-push):** `mvn -q -B verify`.
 - **Repo note:** Blazemeter builds don't use `aws-nexus` (unrelated machine-global mirror). Let the repo's own build config resolve deps — don't inject a Nexus.
+
+## `pip`
+- No BOM concept in pip — bump the **direct dependency**'s pin. For a vulnerable transitive, bump
+  the direct package that pulls it in (same golden rule: never pin the transitive directly).
+- Pin location varies by repo: `requirements.txt` (`pkg==x.y.z`) is the common case; some repos pin
+  in `setup.py`'s `install_requires` or `setup.cfg` instead — bump wherever the version is actually
+  pinned. Regenerate any lock file the repo uses (e.g. `pip-compile`) if present.
+- **Cross-check:** `pip-audit` (falls back to `safety check` if `pip-audit` isn't available) — Mend's
+  suggested version may itself be under advisory on PyPI/OSV.
+- **Match the repo's own pinned Python version.** Different repos pin different exact versions
+  (confirmed so far: `3.11.15`, `3.13`) — read it from the repo's own `Dockerfile`
+  (`FROM python:X.Y` / a `PYTHON_VERSION` build arg) or CI config before running anything, rather
+  than using whatever Python happens to be on the local machine, so the local run actually reflects
+  what CI/production will see.
+- **Local build + test (pre-push), in this preference order:**
+  1. **`pyenv`** — `pyenv install -s <version>` (idempotent — skips if already installed) then run
+     under that version (e.g. `PYENV_VERSION=<version> pyenv exec pip install ...` /
+     `pyenv exec pytest`). No daemon dependency, and each version installs once then stays cached
+     for every future run — the orchestrator's own image pre-installs the versions known today.
+  2. **Docker** (`python:<version>` container) if pyenv isn't available — matches CI's own
+     containerized environment exactly, but depends on a working Docker daemon.
+  3. **Homebrew** (`brew install python@<version>`) only as a last resort — slower, and awkward
+     for holding multiple pinned versions side by side.
+  Then: `pip install -r requirements.txt -r test-requirements.txt` (adjust filenames per repo) then
+  `pytest`. Prefer the repo's own `Makefile`/CI target if one exists (e.g. `make test`) over calling
+  `pytest` directly, so local runs match what CI actually runs.
+
+## `npm`
+- Bump the **direct dependency** in `package.json` (`dependencies`/`devDependencies`) to the fixed
+  version — including the direct dep that pulls a vulnerable transitive. Do **not** reach for
+  `overrides`/`resolutions` to pin the transitive directly; that's the golden rule's "never pin the
+  transitive" applied to npm's own override mechanism.
+- Update with `npm install <pkg>@<version> --save-exact` (or the repo's existing version-pinning
+  style) so `package-lock.json` regenerates and gets committed alongside `package.json`.
+- **Cross-check:** `npm audit` — Mend's suggested version may itself still be flagged. Don't reach
+  for `npm audit fix --force`; it can pull in unrelated breaking majors indiscriminately instead of
+  the targeted golden-rule bump.
+- **Local build + test (pre-push):** `npm ci` then whatever the repo's `package.json` `scripts`
+  actually define (commonly `npm test`; TypeScript repos often need `npm run build` first) — check
+  `scripts` rather than assuming, so local runs match CI.
 
 # Local build+test discipline
 
