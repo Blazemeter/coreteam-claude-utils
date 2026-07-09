@@ -35,13 +35,6 @@ To verify:
 /base-tools:example-command           # try the example slash command
 ```
 
-To update and reload the plugin to a new version after developing a change, run:
-
-```text
-/plugin marketplace update claude-base
-/reload-plugins
-```
-
 ## What's inside
 
 ```
