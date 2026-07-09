@@ -57,9 +57,23 @@ not fixed here.
   pinned. Regenerate any lock file the repo uses (e.g. `pip-compile`) if present.
 - **Cross-check:** `pip-audit` (falls back to `safety check` if `pip-audit` isn't available) — Mend's
   suggested version may itself be under advisory on PyPI/OSV.
-- **Local build + test (pre-push):** `pip install -r requirements.txt -r test-requirements.txt` (adjust
-  filenames per repo) then `pytest`. Prefer the repo's own `Makefile`/CI target if one exists (e.g.
-  `make test`) over calling `pytest` directly, so local runs match what CI actually runs.
+- **Match the repo's own pinned Python version.** Different repos pin different exact versions
+  (confirmed so far: `3.11.15`, `3.13`) — read it from the repo's own `Dockerfile`
+  (`FROM python:X.Y` / a `PYTHON_VERSION` build arg) or CI config before running anything, rather
+  than using whatever Python happens to be on the local machine, so the local run actually reflects
+  what CI/production will see.
+- **Local build + test (pre-push), in this preference order:**
+  1. **`pyenv`** — `pyenv install -s <version>` (idempotent — skips if already installed) then run
+     under that version (e.g. `PYENV_VERSION=<version> pyenv exec pip install ...` /
+     `pyenv exec pytest`). No daemon dependency, and each version installs once then stays cached
+     for every future run — the orchestrator's own image pre-installs the versions known today.
+  2. **Docker** (`python:<version>` container) if pyenv isn't available — matches CI's own
+     containerized environment exactly, but depends on a working Docker daemon.
+  3. **Homebrew** (`brew install python@<version>`) only as a last resort — slower, and awkward
+     for holding multiple pinned versions side by side.
+  Then: `pip install -r requirements.txt -r test-requirements.txt` (adjust filenames per repo) then
+  `pytest`. Prefer the repo's own `Makefile`/CI target if one exists (e.g. `make test`) over calling
+  `pytest` directly, so local runs match what CI actually runs.
 
 ## `npm`
 - Bump the **direct dependency** in `package.json` (`dependencies`/`devDependencies`) to the fixed
