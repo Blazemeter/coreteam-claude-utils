@@ -1,6 +1,6 @@
 ---
 name: dep-remediation
-description: Fix vulnerable dependencies correctly — the golden rule (bump the direct dependency / BOM, never pin the transitive), cross-check the fix version against ecosystem advisories, defer breaking-major upgrades, and compile + unit-test locally before pushing. Load for any dependency remediation or version-bump work in php-composer, gradle-springboot, maven-springboot, or pip projects.
+description: Fix vulnerable dependencies correctly — the golden rule (bump the direct dependency / BOM, never pin the transitive), cross-check the fix version against ecosystem advisories, defer breaking-major upgrades, and compile + unit-test locally before pushing. Load for any dependency remediation or version-bump work in php-composer, gradle-springboot, maven-springboot, pip, or npm projects.
 ---
 
 # Golden rule — fix the DIRECT dependency, never the transitive
@@ -60,6 +60,20 @@ not fixed here.
 - **Local build + test (pre-push):** `pip install -r requirements.txt -r test-requirements.txt` (adjust
   filenames per repo) then `pytest`. Prefer the repo's own `Makefile`/CI target if one exists (e.g.
   `make test`) over calling `pytest` directly, so local runs match what CI actually runs.
+
+## `npm`
+- Bump the **direct dependency** in `package.json` (`dependencies`/`devDependencies`) to the fixed
+  version — including the direct dep that pulls a vulnerable transitive. Do **not** reach for
+  `overrides`/`resolutions` to pin the transitive directly; that's the golden rule's "never pin the
+  transitive" applied to npm's own override mechanism.
+- Update with `npm install <pkg>@<version> --save-exact` (or the repo's existing version-pinning
+  style) so `package-lock.json` regenerates and gets committed alongside `package.json`.
+- **Cross-check:** `npm audit` — Mend's suggested version may itself still be flagged. Don't reach
+  for `npm audit fix --force`; it can pull in unrelated breaking majors indiscriminately instead of
+  the targeted golden-rule bump.
+- **Local build + test (pre-push):** `npm ci` then whatever the repo's `package.json` `scripts`
+  actually define (commonly `npm test`; TypeScript repos often need `npm run build` first) — check
+  `scripts` rather than assuming, so local runs match CI.
 
 # Local build+test discipline
 
