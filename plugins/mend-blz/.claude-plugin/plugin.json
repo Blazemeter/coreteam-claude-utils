@@ -1,7 +1,7 @@
 {
   "name": "mend-blz",
-  "description": "End-to-end Mend remediation recipe for Blazemeter — composes the mend, dep-remediation, jenkins, github, and jira skills into one loop: alerts → fix on a dated branch → Jenkins green → PR → Jira (MOB) → Confluence report. Holds the fix-loop order/gates and supplies the ticket summary/name to jira; the reusable knowledge lives in the composed skills and the component registry lives in the orchestrator (config/services.json).",
-  "version": "0.3.7",
+  "description": "End-to-end Mend remediation recipe for Blazemeter — composes the mend, dep-remediation, jenkins, github, and jira skills into one loop: alerts → fix on a dated branch → Jenkins green → Confluence report → Jira (MOB, created first) → PR (ticket id in the title from creation) → Jira description updated with the PR link. Holds the fix-loop order/gates and supplies the ticket summary/name to jira; the reusable knowledge lives in the composed skills and the component registry lives in the orchestrator (config/services.json).",
+  "version": "0.4.0",
   "author": { "name": "Tehila" },
   "license": "MIT",
   "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"]

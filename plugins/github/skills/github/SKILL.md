@@ -18,4 +18,7 @@ description: Blazemeter GitHub branch and PR conventions — create a unique dat
 
 - Open the PR from `<branch>` into the `integration_branch`.
 - **No GitHub reviewer is set** — ownership is tracked via the Jira assignee, not a GH reviewer.
-- **Tag the PR title:** once the tracking ticket exists, prepend its id to the PR title (HEAD), e.g. `MOB-51396: mend: bump guzzle 7.4 → 7.8`.
+- **Tag the PR title with the tracking ticket id** (prepended, HEAD), e.g. `MOB-51396: mend: bump guzzle 7.4 → 7.8`.
+  If the caller's flow creates the ticket **before** opening the PR (e.g. **mend-blz**), include the
+  id in the title at creation — never open untitled and tag after. Only fall back to tagging the
+  title after the fact if the calling flow's order genuinely creates the ticket after the PR.

@@ -21,16 +21,27 @@ Ids below are the known MOB values — treat them as config the caller may overr
   call the ticket. E.g. the **mend-blz** skill passes `Fix Mend vulnerabilities <repository name>`
   (the repo's short name, e.g. `Fix Mend vulnerabilities a.blazemeter.com` — not the component
   alias).
-- **Description**, in this order:
+- **Description at creation time** (the ticket is created **before** the PR exists — see
+  "Updating after the PR exists" below — so there is no PR link yet), in this order:
   1. Dependencies fixed — one line each `library: <from> → <to>` + severity/CVE.
-  2. **PR link** (the real, open PR).
-  3. **Jenkins build link** — directly under the PR link.
-  4. **Confluence tracking-page link** — only when the caller reports deferred/unfixed items (e.g.
+  2. **Jenkins build link.**
+  3. **Confluence tracking-page link** — only when the caller reports deferred/unfixed items (e.g.
      mend-blz's Confluence report step); omit this line entirely when there's nothing deferred or
      the caller skipped that report. The page must already reflect the current run before this
      ticket is created — create the ticket *after* the caller's Confluence write, not before.
 
 A `nojira` flag skips ticket create/update entirely.
+
+## Updating after the PR exists
+
+Once the caller opens the PR (which carries this ticket's id in its title from creation — see the
+**github** skill), it calls back into this skill to add the **PR link** to the ticket description:
+read the current description and insert the PR link as its own line directly after "Dependencies
+fixed" and before the Jenkins build link — i.e. the final description reads dependencies → PR link
+→ Jenkins link → Confluence link (if any), even though PR and Jenkins were written in the opposite
+order. Jira's API requires the full description field on update, so re-send the whole text with the
+line inserted — don't assume a partial-append endpoint. Skip this step entirely under `nojira`
+(there is no ticket) or if the PR never got opened (e.g. the flow stopped before that step).
 
 ## Rate limits
 

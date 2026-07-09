@@ -1,7 +1,7 @@
 {
   "name": "github",
-  "description": "Blazemeter GitHub branch/PR conventions — a unique date-stamped Docker-safe branch off the integration branch, commit with attribution, push via SSO-authorized gh, open a PR back into the integration branch, and tag the PR title with the tracking ticket id. Reusable by any flow that opens PRs.",
-  "version": "0.1.0",
+  "description": "Blazemeter GitHub branch/PR conventions — a unique date-stamped Docker-safe branch off the integration branch, commit with attribution, push via SSO-authorized gh, open a PR back into the integration branch, and tag the PR title with the tracking ticket id (in the title at creation when the ticket already exists, tagged on after otherwise). Reusable by any flow that opens PRs.",
+  "version": "0.2.0",
   "author": { "name": "Tehila" },
   "license": "MIT",
   "keywords": ["github", "pull-request", "branch", "gh", "blazemeter"]

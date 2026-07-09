@@ -1,7 +1,7 @@
 {
   "name": "jira",
-  "description": "Create and transition Blazemeter MOB Jira tickets — project MOB / board 5348, type Task, Product=Blazemeter, Scrum Team=Terra, active sprint, assignee = the repo owner, status In Review. The ticket summary/name is caller-supplied — reusable by any flow that files a MOB ticket.",
-  "version": "0.2.2",
+  "description": "Create and transition Blazemeter MOB Jira tickets — project MOB / board 5348, type Task, Product=Blazemeter, Scrum Team=Terra, active sprint, assignee = the repo owner, status In Review. The ticket summary/name is caller-supplied — reusable by any flow that files a MOB ticket. Supports creating before a PR exists and later updating the description with the PR link.",
+  "version": "0.3.0",
   "author": { "name": "Tehila" },
   "license": "MIT",
   "keywords": ["jira", "mob", "atlassian", "ticket", "blazemeter"]

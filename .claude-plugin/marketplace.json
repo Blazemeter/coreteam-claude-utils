@@ -40,24 +40,24 @@
     {
       "name": "github",
       "source": "./plugins/github",
-      "description": "Blazemeter GitHub branch/PR conventions — dated Docker-safe branch, commit+push via SSO gh, PR into the integration branch, tag PR title with the ticket id.",
-      "version": "0.1.0",
+      "description": "Blazemeter GitHub branch/PR conventions — dated Docker-safe branch, commit+push via SSO gh, PR into the integration branch, tag PR title with the ticket id (in the title at creation when the ticket already exists).",
+      "version": "0.2.0",
       "keywords": ["github", "pull-request", "branch", "gh"],
       "category": "development"
     },
     {
       "name": "jira",
       "source": "./plugins/jira",
-      "description": "Create/transition Blazemeter MOB Jira tickets — board 5348, Task, Product/Scrum-Team/Sprint fields, assignee = repo owner, status In Review, bounded 429 backoff. Ticket summary/name is caller-supplied.",
-      "version": "0.2.2",
+      "description": "Create/transition Blazemeter MOB Jira tickets — board 5348, Task, Product/Scrum-Team/Sprint fields, assignee = repo owner, status In Review, bounded 429 backoff. Ticket summary/name is caller-supplied. Can be created before a PR exists, then updated with the PR link.",
+      "version": "0.3.0",
       "keywords": ["jira", "mob", "atlassian", "ticket"],
       "category": "development"
     },
     {
       "name": "mend-blz",
       "source": "./plugins/mend-blz",
-      "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → Confluence report → PR → Jira, linked back to Confluence when deferred), registry-driven via services.json.",
-      "version": "0.3.7",
+      "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link), registry-driven via services.json.",
+      "version": "0.4.0",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
     }
