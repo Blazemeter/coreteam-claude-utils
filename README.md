@@ -35,16 +35,12 @@ To verify:
 /base-tools:example-command           # try the example slash command
 ```
 
-## Loading a plugin change after developing it
-
-Inside Claude Code:
+To update and reload the plugin to a new version after developing a change, run:
 
 ```text
-/plugin marketplace update claude-base    # re-fetches the cache at the new version
-/reload-plugins                           # reloads the running session
+/plugin marketplace update claude-base
+/reload-plugins
 ```
-
-Bump `version` in the plugin's `plugin.json` first — the cache is keyed by version, and `/plugin install` is a no-op once installed, so it won't pick up the change.
 
 ## What's inside
 
