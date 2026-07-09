@@ -5,12 +5,22 @@ description: Fix vulnerable dependencies correctly — the golden rule (bump the
 
 # Golden rule — fix the DIRECT dependency, never the transitive
 
-If a vulnerable library **Y** is pulled in by a direct dependency **X**, bump **X** so it resolves a
-fixed **Y**. Do **not** pin/override the transitive **Y** directly. For BOM-managed transitives
-(Spring Framework, micrometer, logback, jackson under Spring Boot), bump the **Spring Boot BOM
-version** — the one dep that brings them all — *not* individual `<spring-framework.version>` /
-`<micrometer.version>` overrides. If no direct-dep / BOM bump resolves the alert, **defer and note
-it** — never pin the transitive.
+Applies the same way across **every** ecosystem this skill covers — php-composer, gradle-springboot,
+maven-springboot, pip, npm: if a vulnerable library **Y** is pulled in by a direct dependency **X**,
+bump **X** so it resolves a fixed **Y**. Do **not** pin/override the transitive **Y** directly — no
+matter which ecosystem-specific mechanism would make that easy (a Maven/Gradle explicit version
+override, npm's `overrides`/`resolutions`, a pip line pinning the transitive package directly). If
+no direct-dep bump resolves the alert, **defer and note it** — never pin the transitive as a
+workaround.
+
+**BOM-managed transitives are a special case of the same rule, not a different one.** Under Spring
+Boot (`gradle-springboot`, `maven-springboot`), several transitives (Spring Framework, micrometer,
+logback, jackson) are version-pinned by the **Spring Boot BOM** — the one dependency that brings
+them all — so "the direct dependency" for those is the **BOM version**, not the individual
+transitive's own `<spring-framework.version>` / `<micrometer.version>` override. Ecosystems with no
+BOM concept (`pip`, `npm`, `php-composer`) don't have this special case at all — there, "the direct
+dependency" is simply whichever direct entry in the manifest pulls in the vulnerable transitive; see
+the per-stack recipe below for exactly where that's pinned in each.
 
 Two more non-negotiables:
 - **Cross-check the fix version against the ecosystem advisory DB.** Mend's suggested version may

@@ -25,7 +25,7 @@
       "name": "dep-remediation",
       "source": "./plugins/dep-remediation",
       "description": "Fix vulnerable dependencies correctly — golden rule (direct/BOM not transitive), advisory cross-check, defer breaking majors, per-stack recipes (composer/gradle/maven/pip/npm) + local build+test.",
-      "version": "0.3.1",
+      "version": "0.3.2",
       "keywords": ["dependencies", "remediation", "composer", "gradle", "maven", "pip", "npm", "bom"],
       "category": "development"
     },
