@@ -1,4 +1,4 @@
-# claude-base — reusable Claude Code plugin marketplace
+# coreteam-claude-base — reusable Claude Code plugin marketplace
 
 [![Plugin marketplace validate](https://github.com/<owner>/claude-base/actions/workflows/plugin-validate.yml/badge.svg)](https://github.com/<owner>/claude-base/actions/workflows/plugin-validate.yml)
 
@@ -21,7 +21,7 @@ Inside Claude Code:
 
 ```text
 /plugin marketplace add <owner>/<repo>
-/plugin install base-tools@claude-base
+/plugin install base-tools@coreteam-claude-base
 ```
 
 (Replace `<owner>/<repo>` with the GitHub path where this repo lives.)
@@ -38,14 +38,14 @@ To verify:
 To update and reload the plugin:
 
 ```text
-/plugin marketplace update claude-base
+/plugin marketplace update coreteam-claude-base
 /reload-plugins
 ```
 
 ## What's inside
 
 ```
-claude-base/
+coreteam-claude-base/
 ├── .claude-plugin/
 │   └── marketplace.json              # Catalog — lists every plugin in this repo
 ├── plugins/
@@ -187,7 +187,7 @@ This marketplace supports many plugins. To add one:
 3. Add an entry to the top-level `.claude-plugin/marketplace.json` `plugins` array.
 4. Drop `skills/`, `commands/`, `agents/`, `hooks/`, `hooks.json` under the new plugin directory.
 
-Users then install with `/plugin install <new-plugin>@claude-base`.
+Users then install with `/plugin install <new-plugin>@coreteam-claude-base`.
 
 ## Validating before pushing
 

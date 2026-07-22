@@ -1,8 +1,8 @@
 {
-  "name": "claude-base",
+  "name": "coreteam-claude-base",
   "description": "Reusable Claude Code plugin marketplace — generic skills, slash commands, sub-agents, and hooks. Use as a starting point or fork into project-specific marketplaces.",
   "owner": {
-    "name": "claude-base maintainers"
+    "name": "coreteam-claude-base maintainers"
   },
   "plugins": [
     {

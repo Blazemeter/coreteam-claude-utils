@@ -1,4 +1,4 @@
-# Contributing to claude-base
+# Contributing to coreteam-claude-base
 
 This repo is the shared base every team uses to publish Claude Code skills, slash commands, sub-agents, and hooks. Changes are gated by a four-job CI pipeline. Local-first workflow: validate before pushing.
 

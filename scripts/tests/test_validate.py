@@ -36,7 +36,7 @@ def make_minimal_marketplace(root: Path, plugin_name: str = "base-tools") -> Pat
     """
     (root / ".claude-plugin").mkdir(parents=True, exist_ok=True)
     (root / ".claude-plugin" / "marketplace.json").write_text(json.dumps({
-        "name": "claude-base",
+        "name": "coreteam-claude-base",
         "owner": {"name": "test"},
         "plugins": [{"name": plugin_name, "source": plugin_name}],
         "metadata": {"pluginRoot": "./plugins"},
