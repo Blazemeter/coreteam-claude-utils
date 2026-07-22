@@ -70,6 +70,7 @@ Skills/commands/agents/hooks are auto-discovered from `plugins/base-tools/` — 
   ```
   `/plugin install base-tools@coreteam-claude-base` is a **no-op once installed** — it checks by name, not version, and just reports "already installed globally." Use `marketplace update`, not `install`, to upgrade.
 - Plugin skills are **namespaced** (`base-tools:grill-me`); they coexist with any personal `~/.claude/skills/` copy of the same short name (`grill-me`), which plugin install never touches.
+- **Changing `.claude-plugin/marketplace.json`'s top-level `name` does NOT rename an already-installed marketplace.** Claude Code keys installed marketplaces by the identifier assigned at `/plugin marketplace add` time (stored in `~/.claude/plugins/known_marketplaces.json`), not by re-reading `name` on every `marketplace update` — `update` only refreshes the plugin contents under the existing key. To pick up a renamed marketplace, remove it (`/plugins` → Marketplaces → select → `d`) and re-add it (`/plugin marketplace add <owner>/<repo>`), then reinstall its plugins under the new `@<name>` suffix.
 
 ## Hooks will block your git/JIRA operations
 
