@@ -60,15 +60,15 @@ CI runs five jobs on every PR (`structural`, `sast`, `secret-scan`, `claude-cli`
 
 ## Shipping a plugin change: bump the version, then upgrade with two commands
 
-Skills/commands/agents/hooks are auto-discovered from `plugins/base-tools/` — adding one needs **no** manifest registration. But the installed-plugin cache is **keyed by version number** (`~/.claude/plugins/cache/claude-base/base-tools/<version>/`), so a change that doesn't bump the version never reaches anyone who already has the plugin — they keep loading the stale cache for that version.
+Skills/commands/agents/hooks are auto-discovered from `plugins/base-tools/` — adding one needs **no** manifest registration. But the installed-plugin cache is **keyed by version number** (`~/.claude/plugins/cache/coreteam-claude-base/base-tools/<version>/`), so a change that doesn't bump the version never reaches anyone who already has the plugin — they keep loading the stale cache for that version.
 
 - **Every PR that touches a skill/command/agent/hook must bump `version` in `plugins/base-tools/.claude-plugin/plugin.json`** (and keep the matching entry in `.claude-plugin/marketplace.json` in sync — a mismatch trips a `validate.py` warning). `plugin.json` is the version that wins at install time.
 - **To pick up a new version, the upgrade flow is `marketplace update` + `reload-plugins` — NOT `install`:**
   ```
-  /plugin marketplace update claude-base    # upgrades the installed plugin to the new version (re-fetches the cache)
+  /plugin marketplace update coreteam-claude-base    # upgrades the installed plugin to the new version (re-fetches the cache)
   /reload-plugins                           # reloads the running session (or fully restart Claude Code)
   ```
-  `/plugin install base-tools@claude-base` is a **no-op once installed** — it checks by name, not version, and just reports "already installed globally." Use `marketplace update`, not `install`, to upgrade.
+  `/plugin install base-tools@coreteam-claude-base` is a **no-op once installed** — it checks by name, not version, and just reports "already installed globally." Use `marketplace update`, not `install`, to upgrade.
 - Plugin skills are **namespaced** (`base-tools:grill-me`); they coexist with any personal `~/.claude/skills/` copy of the same short name (`grill-me`), which plugin install never touches.
 
 ## Hooks will block your git/JIRA operations
