@@ -60,6 +60,14 @@
       "version": "0.4.0",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
+    },
+    {
+      "name": "opensearch",
+      "source": "./plugins/opensearch",
+      "description": "Search BlazeMeter logs across denv/bzdev/ci/staging/prod — bundles a read-only opensearch-reader MCP server plus a skill that builds safe Lucene queries and condenses results.",
+      "version": "0.1.0",
+      "keywords": ["opensearch", "logs", "observability", "lucene", "bzdev", "denv", "search"],
+      "category": "observability"
     }
   ]
 }
