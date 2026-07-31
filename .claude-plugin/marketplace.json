@@ -68,6 +68,14 @@
       "version": "0.1.0",
       "keywords": ["opensearch", "logs", "observability", "lucene", "bzdev", "denv", "search"],
       "category": "observability"
+    },
+    {
+      "name": "pr-review",
+      "source": "./plugins/pr-review",
+      "description": "Address and incorporate GitHub PR review comments for any repo — fetch, validate against the repo's own conventions, incorporate minimally, auto-detect and run tests/lint, one-pass code-review sub-agent, commit, reply to every thread, optional polling.",
+      "version": "0.1.0",
+      "keywords": ["pr", "pull-request", "code-review", "github", "review-comments"],
+      "category": "development"
     }
   ]
 }

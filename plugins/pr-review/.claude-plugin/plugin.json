@@ -1,0 +1,8 @@
+{
+  "name": "pr-review",
+  "description": "Address and incorporate GitHub PR review comments for any repo — fetch, validate against the repo's own conventions, incorporate minimally, auto-detect and run the repo's tests/lint, spawn a one-pass code-review sub-agent, commit, reply to every thread, and optionally poll for new comments.",
+  "version": "0.1.0",
+  "author": { "name": "Himanshu Charegaonkar" },
+  "license": "MIT",
+  "keywords": ["pr", "pull-request", "code-review", "github", "review-comments"]
+}
