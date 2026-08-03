@@ -1,0 +1,17 @@
+{
+  "_comment": "Plugin-level hooks. Scripts live under hooks/. Remove '_comment' fields when adapting in production — JSON doesn't support comments.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "_comment": "Defense-in-depth — even though the bundled opensearch-reader MCP server only exposes read tools, block any unexpected/renamed tool from that server so this plugin can never be used to mutate data.",
+        "matcher": "mcp__opensearch-reader__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/block-non-readonly-opensearch-tools.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

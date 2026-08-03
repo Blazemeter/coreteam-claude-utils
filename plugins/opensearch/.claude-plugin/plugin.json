@@ -1,0 +1,8 @@
+{
+  "name": "opensearch",
+  "description": "Search BlazeMeter logs across denv, bzdev, ci, staging, and prod OpenSearch clusters — bundles a read-only opensearch-reader MCP server plus a skill that builds safe Lucene queries and condenses results. Reusable by any flow that needs log evidence.",
+  "version": "0.1.0",
+  "author": { "name": "Himanshu Charegaonkar" },
+  "license": "MIT",
+  "keywords": ["opensearch", "logs", "observability", "lucene", "bzdev", "denv", "search"]
+}

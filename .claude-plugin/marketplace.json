@@ -60,6 +60,22 @@
       "version": "0.4.0",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
+    },
+    {
+      "name": "opensearch",
+      "source": "./plugins/opensearch",
+      "description": "Search BlazeMeter logs across denv/bzdev/ci/staging/prod — bundles a read-only opensearch-reader MCP server plus a skill that builds safe Lucene queries and condenses results.",
+      "version": "0.1.0",
+      "keywords": ["opensearch", "logs", "observability", "lucene", "bzdev", "denv", "search"],
+      "category": "observability"
+    },
+    {
+      "name": "pr-review",
+      "source": "./plugins/pr-review",
+      "description": "Address and incorporate GitHub PR review comments for any repo — fetch, validate against the repo's own conventions, incorporate minimally, auto-detect and run tests/lint, one-pass code-review sub-agent, commit, reply to every thread, optional polling.",
+      "version": "0.1.0",
+      "keywords": ["pr", "pull-request", "code-review", "github", "review-comments"],
+      "category": "development"
     }
   ]
 }
