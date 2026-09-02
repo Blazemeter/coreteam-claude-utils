@@ -14,6 +14,9 @@ Ids below are the known MOB values — treat them as config the caller may overr
 - **Sprint = active sprint** of board 5348 — `customfield_10020`
 - **Assignee = the repo `owner`** — resolve the display name → accountId via `/rest/api/3/user/search?query=<owner>`; if `owner` is empty, fall back to `tcohen`. (Assignee is how ownership is tracked — there's no GitHub reviewer.)
 - **Status → `In Review`** — transition id `61`.
+- **Labels** — set `fields.labels` to whatever the caller passes (Jira labels allow no spaces; use
+  `_`). The **mend-blz** caller passes **`mend_orch`** so every orchestrator-created ticket is
+  filterable (JQL `labels = mend_orch`); include any others the caller supplies alongside it.
 
 ## Summary & description
 

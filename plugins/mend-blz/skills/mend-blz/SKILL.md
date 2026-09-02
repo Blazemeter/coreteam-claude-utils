@@ -1,6 +1,6 @@
 ---
 name: mend-blz
-description: End-to-end Mend vulnerability remediation for Blazemeter components (a.blazemeter, dagger, search). Composes the mend, dep-remediation, jenkins, github, and jira skills into one loop — Mend alerts → dependency fix on a fresh date-stamped branch → Jenkins green → Confluence report → Jira (MOB, created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link. Load when the user wants to fix/remediate Mend/WhiteSource vulnerabilities for a Blazemeter service.
+description: End-to-end Mend vulnerability remediation for Blazemeter components (a.blazemeter, dagger, search). Composes the mend, dep-remediation, jenkins, github, and jira skills into one loop — Mend alerts → dependency fix on a fresh date-stamped branch → Jenkins green → denv deploy + fix-related API tests (fix verified in denv) → Confluence report → Jira (MOB, created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link. Load when the user wants to fix/remediate Mend/WhiteSource vulnerabilities for a Blazemeter service.
 ---
 
 # When to use
@@ -13,6 +13,7 @@ composer — the reusable knowledge lives in five skills it drives:
 | Fetch/triage Mend alerts, resolve project token, severity | **mend** |
 | Apply the fix (golden rule, advisory cross-check, defer majors, per-stack recipe, local build+test) | **dep-remediation** |
 | Trigger the branch build with `PUSH_TO_GCR=true` + `PERFORM_WHITESOURCE_SCAN=true` and gate on green | **jenkins** |
+| Deploy the branch's image to denv, then run the fix-related API tests against it and gate on them | **jenkins** |
 | Upsert currently-unfixable libraries to the Confluence tracking page | this skill (see [references/mend-confluence-report.md](references/mend-confluence-report.md)) |
 | Create the MOB ticket (In Review, assignee = owner) **before the PR exists** — this skill supplies the ticket summary; description covers dependencies fixed + Jenkins, and links back to Confluence when there were deferred alerts | **jira** |
 | Dated branch, commit/push, open PR **with the ticket id already in the title** | **github** |
@@ -46,11 +47,12 @@ orchestrator's `config/services.json`) a per-component entry with these fields:
 | `jenkins_folder` | multibranch folder on blazect Jenkins — see the **jenkins** skill |
 | `integration_branch` | branch the fix branches off / PRs into (`develop`/`master`) |
 | `stack` | drives the fix recipe + manifest (`php-composer`→`composer.json`, `gradle-springboot`→`build.gradle.kts`, `maven-springboot`→`pom.xml`) — see **dep-remediation** |
+| `api_tests` | list of `api_testing/tests/…` paths for the denv API-test gate (step 7b) — run as `TESTS_TO_RUN_MANUAL`; empty = deploy-only (skip the API-test gate) — see the **jenkins** skill |
 | `description` | human label |
 
 # Fix loop
 
-Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link.** Local tests run before push (fail fast); Jenkins-green is the hard gate — nothing downstream runs until the branch build is green. The Confluence report runs right after the gate and **before** Jira/PR, and regardless of how the run ends (including a red-build stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
+Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → denv deploy + fix-related API tests (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link.** Local tests run before push (fail fast); Jenkins-green, the denv deploy, and the fix-related API tests are all hard gates — nothing downstream runs until the branch build is green, its image deploys green in denv, **and** the API tests covering the fixed area pass. The Confluence report runs right after the gates and **before** Jira/PR, and regardless of how the run ends (including a red-build, failed-denv-deploy, or failed-API-test stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
 
 1. **Fetch alerts → triage to the requested scope** (default HIGH+CRITICAL, case-insensitive) — via **mend**. Resolve the project token first. Triage by the alert set, not by what's in flight (fix an in-scope alert even if it's in another open PR). Only fix alerts in the component's `stack` ecosystem; defer the rest to the summary.
 2. **Create the dated branch** `mend-fix-<YYYYMMDD-HHMMSS>` off `integration_branch` — via **github**.
@@ -59,10 +61,26 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
 5. **Commit + push** the branch — via **github**.
 6. **Trigger the build with `PUSH_TO_GCR=true` + `PERFORM_WHITESOURCE_SCAN=true` and poll until
    green** — via **jenkins**. Red → fix-forward, cap **3 attempts**; still red → stop (no PR/Jira,
-   but still do step 7) + Notes. Expect **two builds** after the push: the branch's own
+   but still do step 8) + Notes. Expect **two builds** after the push: the branch's own
    auto-trigger (webhook/branch-indexing, default params) plus this explicit parameterized one —
    gate on the **explicit** one, not the auto-triggered one.
-7. **Upsert currently-unfixable libraries to Confluence** — a manager-facing quick view, not a
+7. **Deploy to denv, then verify the fix with the related API tests** — via **jenkins**. Two hard
+   gates, in order:
+   (a) **Deploy** the branch's freshly-built image (step 6, `PUSH_TO_GCR=true`) to denv — trigger
+       the shared denv deploy job with the **fix branch you pushed** (`GIRO_BRANCH`) and gate on it
+       going green (the image starts/runs in denv).
+   (b) **Functionally verify** the fix — run this component's API tests against that denv env
+       (`API-TEST-SELECTED-DEV-ENV`, `TARGET_ENV=DEnv`), and gate on them passing. Use the
+       component's **`api_tests`** list from the catalog entry (passed in the target config) as
+       `TESTS_TO_RUN_MANUAL`, verbatim — it is the curated, per-repo set (don't guess paths). **If
+       `api_tests` is empty** (e.g. scaleron), **skip this API-test gate** and rely on the deploy
+       gate (a) alone. A green deploy only proves the image starts; these tests prove the fix
+       didn't break behavior.
+   If either gate fails → **fix-forward** (a red API test means the dependency fix is wrong — change
+   the version or adjust code, re-push → re-build → re-deploy → re-test), cap **3 attempts** total;
+   still failing → stop (no PR/Jira, but still do step 8) + Notes. Nothing downstream (Jira/PR) runs
+   until both the denv deploy and the fix-related API tests are green.
+8. **Upsert currently-unfixable libraries to Confluence** — a manager-facing quick view, not a
    run log: only libraries genuinely un-fixable right now (breaking major required, no fix version
    upstream, or out-of-recipe ecosystem) get a row on the
    [Mend vulns](https://perforce.atlassian.net/wiki/spaces/BLZRD/pages/3332964371/Mend+vuls)
@@ -73,21 +91,23 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
    row rather than getting its own. Report the **primary/direct** library per the golden rule,
    never a transitive one. See
    [references/mend-confluence-report.md](references/mend-confluence-report.md) for the exact API
-   calls, upsert matching, and column schema. Runs even when step 6 stopped early on a red build.
-   Skip silently if nothing from this run qualifies.
-8. **Create the MOB ticket** (In Review, assignee = owner) unless `nojira` — via **jira**, passing
-   the summary `Fix Mend vulnerabilities <repository name>` (jira owns project/board/fields/
-   status; this recipe only supplies the ticket's name and description content). Created **before**
+   calls, upsert matching, and column schema. Runs even when step 6 or 7 stopped early on a red
+   build. Skip silently if nothing from this run qualifies.
+9. **Create the MOB ticket** (In Review, assignee = owner) unless `nojira` — via **jira**, passing
+   the summary `Fix Mend vulnerabilities <repository name>` and the label **`mend_orch`** (so every
+   orchestrator-created ticket is filterable via `labels = mend_orch`); jira owns project/board/
+   fields/status — this recipe only supplies the ticket's name, label, and description content.
+   Created **before**
    the PR exists, so the description at this point covers dependencies fixed and the Jenkins build
-   link; if step 7 reported any deferred/unfixed alerts, it also links to the Confluence page (see
-   the **jira** skill's description ordering) — omit that line if step 7 had nothing to report or
-   was skipped via `noconfluence`. It cannot yet include a PR link (see step 10).
-9. **Open the PR** into `integration_branch` — via **github**. The MOB ticket already exists
-   (step 8), so the title carries the `MOB-####` id **from creation** — never tagged on
+   link; if step 8 reported any deferred/unfixed alerts, it also links to the Confluence page (see
+   the **jira** skill's description ordering) — omit that line if step 8 had nothing to report or
+   was skipped via `noconfluence`. It cannot yet include a PR link (see step 11).
+10. **Open the PR** into `integration_branch` — via **github**. The MOB ticket already exists
+   (step 9), so the title carries the `MOB-####` id **from creation** — never tagged on
    afterward. If `nojira` was set, open the PR without a ticket id in the title.
-10. **Update the MOB ticket's description** to add the PR link, now that the PR exists — via
+11. **Update the MOB ticket's description** to add the PR link, now that the PR exists — via
     **jira**. Skip when `nojira` (no ticket to update).
-11. **Write the summary table** — one row per alert acted on:
+12. **Write the summary table** — one row per alert acted on:
 
     | Repository | Alert (CVE / library) | Fix (from → to) | Succeeded | Notes |
     |------------|-----------------------|-----------------|-----------|-------|
@@ -99,11 +119,11 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
 
 | Flag | Effect |
 |------|--------|
-| *(none)* | Full loop as above (Jenkins gate → Confluence → Jira → PR → Jira description update). Red build → fix-forward up to 3; still red → stop + Notes. |
+| *(none)* | Full loop as above (Jenkins gate → denv-deploy + fix-related API-test gate → Confluence → Jira → PR → Jira description update). Red build, failed denv deploy, **or** failed fix-related API test → fix-forward up to 3; still failing → stop + Notes. |
 | `test` | Skip the Mend API; read pre-seeded JSON from `/tmp/mend-<component>-vulns.json` (see **mend**). |
 | `nojenkins` | Skip the Jenkins-green gate — open the PR/Jira without waiting for the build. |
 | `nojira` | Skip Jira create and the later description update; the PR opens without a ticket id in the title. |
-| `noconfluence` | Skip the step-7 Confluence report (and the Jira description's link to it). |
+| `noconfluence` | Skip the step-8 Confluence report (and the Jira description's link to it). |
 
 # References
 
