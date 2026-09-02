@@ -32,9 +32,9 @@
     {
       "name": "jenkins",
       "source": "./plugins/jenkins",
-      "description": "Blazemeter blazect Jenkins gate — trigger a multibranch build with PUSH_TO_GCR + PERFORM_WHITESOURCE_SCAN, gate on the specific triggered build (not lastBuild), fix-forward, never gate on API_TESTS-CI.",
-      "version": "0.1.2",
-      "keywords": ["jenkins", "ci", "blazect", "gcr", "build-gate"],
+      "description": "Blazemeter blazect Jenkins gate — trigger a multibranch build with PUSH_TO_GCR + PERFORM_WHITESOURCE_SCAN, gate on the specific triggered build (not lastBuild), fix-forward, never gate on API_TESTS-CI; plus deploy a green branch to denv via the shared 'Deploy environment' job and gate on it.",
+      "version": "0.1.3",
+      "keywords": ["jenkins", "ci", "blazect", "gcr", "build-gate", "denv-deploy"],
       "category": "development"
     },
     {
@@ -48,16 +48,16 @@
     {
       "name": "jira",
       "source": "./plugins/jira",
-      "description": "Create/transition Blazemeter MOB Jira tickets — board 5348, Task, Product/Scrum-Team/Sprint fields, assignee = repo owner, status In Review, bounded 429 backoff. Ticket summary/name is caller-supplied. Can be created before a PR exists, then updated with the PR link.",
-      "version": "0.3.0",
+      "description": "Create/transition Blazemeter MOB Jira tickets — board 5348, Task, Product/Scrum-Team/Sprint fields, assignee = repo owner, status In Review, caller-supplied labels (e.g. mend_orch), bounded 429 backoff. Ticket summary/name is caller-supplied. Can be created before a PR exists, then updated with the PR link.",
+      "version": "0.3.1",
       "keywords": ["jira", "mob", "atlassian", "ticket"],
       "category": "development"
     },
     {
       "name": "mend-blz",
       "source": "./plugins/mend-blz",
-      "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link), registry-driven via services.json.",
-      "version": "0.4.0",
+      "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → denv deploy + fix-related API tests → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link), registry-driven via services.json.",
+      "version": "0.5.0",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
     },
