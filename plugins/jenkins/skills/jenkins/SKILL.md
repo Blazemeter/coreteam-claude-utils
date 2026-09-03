@@ -59,10 +59,12 @@ POST https://blazect-jenkins.blazemeter.com/job/Deploy%20environment/job/master/
 - **`GIRO_BRANCH`** — the **fix branch you pushed** (e.g. `mend-fix-20260820-105216`), a plain
   branch name — **not** the image tag. The job maps the branch to its freshly-built image. (Real
   values seen: `master`, `develop`, `MOB-52582-…`.)
-- **`USERNAME`** — GitHub username that also **names the denv environment**. Use **the person who
-  started the run** — their run deploys into their own denv env. The orchestrator passes this
-  through from whoever triggered the command. **For now, until that wiring is in place, pass
-  `kasatsurabhi`** (temporary stand-in for verification).
+- **`USERNAME`** — the denv environment to deploy into (also a GitHub username). For an
+  orchestrated run pass **`svc-automation`** — the automation's own Jenkins service-account
+  identity, which is *also* the env `API-TEST-SELECTED-DEV-ENV` targets when the automation
+  triggers it, so the deploy and the API test hit the **same** env. That env must be provisioned
+  with the api-testing users/keys (see the deploy-verify prereqs). For a manual/local run by a
+  person, pass that person's own denv env name instead.
 - Both are uno-choice `DynamicReferenceParameter`s but accept a plain string via
   `buildWithParameters` (past builds submit plain values).
 
@@ -83,7 +85,7 @@ just deployed. This is a **targeted** selected-tests run and is **distinct from*
 **Job:** `job/API-TEST-SELECTED-DEV-ENV`
 
 ```
-POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildWithParameters?TARGET_ENV=DEnv&TESTS_TO_RUN_MANUAL=<space-separated test files>&API_TESTING_BRANCH=develop&SDK_BRANCH=master
+POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildWithParameters?TARGET_ENV=DEnv&TESTS_TO_RUN=<first-test-relative-path>&TESTS_TO_RUN_MANUAL=<space-separated test files>&API_TESTING_BRANCH=develop&SDK_BRANCH=master
 ```
 
 - **`TARGET_ENV=DEnv`** — run against the denv environment (the one deployed above).
@@ -92,6 +94,10 @@ POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildW
   from the catalog) rather than guessing paths. Standalone, pick the file(s) matching the fixed
   area, e.g. a file-parsing fix → `api_testing/tests/test_file_parsing.py`. An empty list = skip
   this gate (deploy-only).
+- **`TESTS_TO_RUN`** — the job's dropdown that otherwise defaults to the unrelated `test_account.py`.
+  Set it to **the first of the fix-related tests**, as a path **relative to `api_testing/tests/`**
+  (i.e. the same first entry as `TESTS_TO_RUN_MANUAL`, with the `api_testing/tests/` prefix removed) —
+  e.g. `test_search_service/test_security.py` — so it reflects the selected tests, not the default.
 - Leave `API_TESTING_BRANCH=develop`, `SDK_BRANCH=master`, `RUN_EXPENSIVE=1`, `SLEEP_TIME=2` at
   defaults unless a run needs otherwise.
 
