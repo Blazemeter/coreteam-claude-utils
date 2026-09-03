@@ -32,8 +32,8 @@
     {
       "name": "jenkins",
       "source": "./plugins/jenkins",
-      "description": "Blazemeter blazect Jenkins gate — trigger a multibranch build with PUSH_TO_GCR + PERFORM_WHITESOURCE_SCAN, gate on the specific triggered build (not lastBuild), fix-forward, never gate on API_TESTS-CI; plus deploy a green branch to denv via the shared 'Deploy environment' job and gate on it.",
-      "version": "0.1.3",
+      "description": "Blazemeter blazect Jenkins gate — trigger a multibranch build with PUSH_TO_GCR + PERFORM_WHITESOURCE_SCAN, gate on the specific triggered build (not lastBuild), fix-forward, never gate on API_TESTS-CI; plus deploy a green branch to denv (USERNAME=svc-automation) via the shared 'Deploy environment' job and gate on it.",
+      "version": "0.1.4",
       "keywords": ["jenkins", "ci", "blazect", "gcr", "build-gate", "denv-deploy"],
       "category": "development"
     },
