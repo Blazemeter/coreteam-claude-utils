@@ -59,12 +59,11 @@ POST https://blazect-jenkins.blazemeter.com/job/Deploy%20environment/job/master/
 - **`GIRO_BRANCH`** — the **fix branch you pushed** (e.g. `mend-fix-20260820-105216`), a plain
   branch name — **not** the image tag. The job maps the branch to its freshly-built image. (Real
   values seen: `master`, `develop`, `MOB-52582-…`.)
-- **`USERNAME`** — the denv environment to deploy into (also a GitHub username). For an
-  orchestrated run pass **`svc-automation`** — the automation's own Jenkins service-account
-  identity, which is *also* the env `API-TEST-SELECTED-DEV-ENV` targets when the automation
-  triggers it, so the deploy and the API test hit the **same** env. That env must be provisioned
-  with the api-testing users/keys (see the deploy-verify prereqs). For a manual/local run by a
-  person, pass that person's own denv env name instead.
+- **`USERNAME`** — the denv environment to deploy into (also a GitHub username). Pass the value
+  of the **`JENKINS_USER` environment variable** — the same account used to authenticate to
+  Jenkins. This ensures the deploy and the `API-TEST-SELECTED-DEV-ENV` job both target the
+  **same** denv env (the API test job derives the env from `BUILD_USER`, which matches
+  `JENKINS_USER`).
 - Both are uno-choice `DynamicReferenceParameter`s but accept a plain string via
   `buildWithParameters` (past builds submit plain values).
 

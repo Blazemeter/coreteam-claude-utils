@@ -1,6 +1,6 @@
 ---
 name: mend-blz
-description: End-to-end Mend vulnerability remediation for Blazemeter components (a.blazemeter, dagger, search). Composes the mend, dep-remediation, jenkins, github, and jira skills into one loop — Mend alerts → dependency fix on a fresh date-stamped branch → Jenkins green → denv deploy + fix-related API tests (fix verified in denv) → Confluence report → Jira (MOB, created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link. Load when the user wants to fix/remediate Mend/WhiteSource vulnerabilities for a Blazemeter service.
+description: End-to-end Mend vulnerability remediation for Blazemeter components (a.blazemeter, dagger, search, crane components). Composes the mend, dep-remediation, jenkins, github, and jira skills into one loop — Mend alerts → dependency fix on a fresh date-stamped branch → Jenkins green → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → denv deploy + fix-related API tests (fix verified in denv) → Confluence report → Jira (MOB, created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link. Load when the user wants to fix/remediate Mend/WhiteSource vulnerabilities for a Blazemeter service.
 ---
 
 # When to use
@@ -13,6 +13,7 @@ composer — the reusable knowledge lives in five skills it drives:
 | Fetch/triage Mend alerts, resolve project token, severity | **mend** |
 | Apply the fix (golden rule, advisory cross-check, defer majors, per-stack recipe, local build+test) | **dep-remediation** |
 | Trigger the branch build with `PUSH_TO_GCR=true` + `PERFORM_WHITESOURCE_SCAN=true` and gate on green | **jenkins** |
+| [Crane repos only] Via GitHub API (no clone): create matching branch in `a.blazemeter.com`, patch `HarborVersionsSettings.php` version to `latest-<fix-branch>`, commit | this skill (step 6b) |
 | Deploy the branch's image to denv, then run the fix-related API tests against it and gate on them | **jenkins** |
 | Upsert currently-unfixable libraries to the Confluence tracking page | this skill (see [references/mend-confluence-report.md](references/mend-confluence-report.md)) |
 | Create the MOB ticket (In Review, assignee = owner) **before the PR exists** — this skill supplies the ticket summary; description covers dependencies fixed + Jenkins, and links back to Confluence when there were deferred alerts | **jira** |
@@ -48,11 +49,13 @@ orchestrator's `config/services.json`) a per-component entry with these fields:
 | `integration_branch` | branch the fix branches off / PRs into (`develop`/`master`) |
 | `stack` | drives the fix recipe + manifest (`php-composer`→`composer.json`, `gradle-springboot`→`build.gradle.kts`, `maven-springboot`→`pom.xml`) — see **dep-remediation** |
 | `api_tests` | list of `api_testing/tests/…` paths for the denv API-test gate (step 7b) — run as `TESTS_TO_RUN_MANUAL`; empty = deploy-only (skip the API-test gate) — see the **jenkins** skill |
+| `crane` | `true` for crane components (torero, apm-manager, proxy-recorder, bzm-crane, richrach) — triggers the a.blazemeter.com branch step (6b) before denv deploy |
+| `harbor_php_key` | PHP constant name in `HarborRepository` (e.g. `RESOURCE_TORERO`) — used in step 6b to locate and update the `'version'` line in `HarborVersionsSettings.php` |
 | `description` | human label |
 
 # Fix loop
 
-Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → denv deploy + fix-related API tests (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link.** Local tests run before push (fail fast); Jenkins-green, the denv deploy, and the fix-related API tests are all hard gates — nothing downstream runs until the branch build is green, its image deploys green in denv, **and** the API tests covering the fixed area pass. The Confluence report runs right after the gates and **before** Jira/PR, and regardless of how the run ends (including a red-build, failed-denv-deploy, or failed-API-test stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
+Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → denv deploy + fix-related API tests (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link.** Local tests run before push (fail fast); Jenkins-green, the denv deploy, and the fix-related API tests are all hard gates — nothing downstream runs until the branch build is green, its image deploys green in denv, **and** the API tests covering the fixed area pass. The Confluence report runs right after the gates and **before** Jira/PR, and regardless of how the run ends (including a red-build, failed-denv-deploy, or failed-API-test stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
 
 1. **Fetch alerts → triage to the requested scope** (default HIGH+CRITICAL, case-insensitive) — via **mend**. Resolve the project token first. Triage by the alert set, not by what's in flight (fix an in-scope alert even if it's in another open PR). Only fix alerts in the component's `stack` ecosystem; defer the rest to the summary.
 2. **Create the dated branch** `mend-fix-<YYYYMMDD-HHMMSS>` off `integration_branch` — via **github**.
@@ -64,6 +67,50 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
    but still do step 8) + Notes. Expect **two builds** after the push: the branch's own
    auto-trigger (webhook/branch-indexing, default params) plus this explicit parameterized one —
    gate on the **explicit** one, not the auto-triggered one.
+6b. **[Crane repos only] Pin the fix's image tag in `a.blazemeter.com` via the GitHub API** —
+    when `crane` is `true` in the catalog entry, after Jenkins green (step 6) and **before** denv
+    deploy (step 7). No clone — use `gh api` (auth via `GH_TOKEN`) for three calls:
+
+    **(i) Create the branch off `develop`:**
+    ```
+    # Get develop HEAD SHA
+    DEV_SHA=$(gh api /repos/Blazemeter/a.blazemeter.com/git/refs/heads/develop --jq '.object.sha')
+    # Create branch with the same name as the component fix branch
+    gh api --method POST /repos/Blazemeter/a.blazemeter.com/git/refs \
+      -f ref="refs/heads/<fix-branch>" -f sha="$DEV_SHA"
+    ```
+
+    **(ii) Fetch the file, patch the version, commit back:**
+    ```
+    FILE_PATH="src/blazemeter/Settings/HarborVersionsSettings.php"
+    # Fetch current content + SHA (needed for the update)
+    FILE_JSON=$(gh api /repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH?ref=<fix-branch>)
+    FILE_SHA=$(echo "$FILE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['sha'])")
+    CONTENT=$(echo "$FILE_JSON" | python3 -c "import sys,json,base64; print(base64.b64decode(json.load(sys.stdin)['content']).decode())")
+
+    # Patch: find the block for harbor_php_key and replace its 'version' line
+    # harbor_php_key e.g. RESOURCE_TORERO; fix-branch e.g. mend-fix-20260826-092258
+    PATCHED=$(echo "$CONTENT" | python3 -c "
+    import sys, re
+    src = sys.stdin.read()
+    # Replace 'version' => '...' in the block immediately following RESOURCE_<key>
+    pattern = r\"(HarborRepository::<harbor_php_key>[\\s\\S]*?'version'\\s*=>\\s*')[^']+(')\"\
+    result = re.sub(pattern, r\"\\g<1>latest-<fix-branch>\\g<2>\", src, count=1)
+    print(result, end='')
+    ")
+
+    NEW_CONTENT=$(echo "$PATCHED" | python3 -c "import sys,base64; print(base64.b64encode(sys.stdin.buffer.read()).decode())")
+    gh api --method PUT /repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH \
+      -f message="<fix-branch>: pin <harbor_php_key> to latest-<fix-branch>" \
+      -f content="$NEW_CONTENT" \
+      -f sha="$FILE_SHA" \
+      -f branch="<fix-branch>"
+    ```
+
+    When the denv deploy (step 7a) runs with `GIRO_BRANCH=<fix-branch>`, the deploy job finds
+    **both** branches — the crane component's dep fix and `a.blazemeter.com`'s updated
+    `HarborVersionsSettings.php` — and deploys the correct GCR image. For non-crane repos
+    (`crane` absent or `false`) skip this step entirely.
 7. **Deploy to denv, then verify the fix with the related API tests** — via **jenkins**. Two hard
    gates, in order:
    (a) **Deploy** the branch's freshly-built image (step 6, `PUSH_TO_GCR=true`) to denv — trigger
@@ -119,7 +166,7 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
 
 | Flag | Effect |
 |------|--------|
-| *(none)* | Full loop as above (Jenkins gate → denv-deploy + fix-related API-test gate → Confluence → Jira → PR → Jira description update). Red build, failed denv deploy, **or** failed fix-related API test → fix-forward up to 3; still failing → stop + Notes. |
+| *(none)* | Full loop as above (Jenkins gate → [crane only] a.blazemeter.com branch → denv-deploy + fix-related API-test gate → Confluence → Jira → PR → Jira description update). Red build, failed denv deploy, **or** failed fix-related API test → fix-forward up to 3; still failing → stop + Notes. |
 | `test` | Skip the Mend API; read pre-seeded JSON from `/tmp/mend-<component>-vulns.json` (see **mend**). |
 | `nojenkins` | Skip the Jenkins-green gate — open the PR/Jira without waiting for the build. |
 | `nojira` | Skip Jira create and the later description update; the PR opens without a ticket id in the title. |

@@ -1,7 +1,7 @@
 {
   "name": "jenkins",
   "description": "Blazemeter blazect Jenkins knowledge — trigger a multibranch branch build with PUSH_TO_GCR and PERFORM_WHITESOURCE_SCAN, gate on green (unit-test/prisms/mend), fix-forward, and never gate on the slow API_TESTS-CI suite; plus deploy a green branch to a denv environment via the shared 'Deploy environment' job (GIRO_BRANCH + USERNAME) and gate on that deploy. Reusable by any flow that gates on a Blazemeter CI build or denv deploy.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": { "name": "Tehila" },
   "license": "MIT",
   "keywords": ["jenkins", "ci", "blazect", "gcr", "build-gate", "blazemeter"]

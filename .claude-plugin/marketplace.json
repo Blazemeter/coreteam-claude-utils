@@ -32,8 +32,8 @@
     {
       "name": "jenkins",
       "source": "./plugins/jenkins",
-      "description": "Blazemeter blazect Jenkins gate — trigger a multibranch build with PUSH_TO_GCR + PERFORM_WHITESOURCE_SCAN, gate on the specific triggered build (not lastBuild), fix-forward, never gate on API_TESTS-CI; plus deploy a green branch to denv (USERNAME=svc-automation) via the shared 'Deploy environment' job and gate on it.",
-      "version": "0.1.4",
+      "description": "Blazemeter blazect Jenkins gate — trigger a multibranch build with PUSH_TO_GCR + PERFORM_WHITESOURCE_SCAN, gate on the specific triggered build (not lastBuild), fix-forward, never gate on API_TESTS-CI; plus deploy a green branch to denv (USERNAME=JENKINS_USER) via the shared 'Deploy environment' job and gate on it.",
+      "version": "0.1.5",
       "keywords": ["jenkins", "ci", "blazect", "gcr", "build-gate", "denv-deploy"],
       "category": "development"
     },
@@ -56,8 +56,8 @@
     {
       "name": "mend-blz",
       "source": "./plugins/mend-blz",
-      "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → denv deploy + fix-related API tests → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link), registry-driven via services.json.",
-      "version": "0.5.0",
+      "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → [crane only] a.blazemeter.com branch → denv deploy + fix-related API tests → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link), registry-driven via services.json.",
+      "version": "0.6.0",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
     },
