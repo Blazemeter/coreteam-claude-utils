@@ -77,3 +77,9 @@ forbidden:
 #         - Bash(terraform show*)
 #       justification: "skill produces plan summaries; cannot run apply or destroy"
 exceptions:
+  - artifact: master-investigation/skills/investigate-master
+    tools:
+      - Bash(gcloud auth list*)
+      - Bash(gcloud storage ls*)
+      - Bash(gcloud storage cp*)
+    justification: "read-only fetch/listing of BlazeMeter session artifacts from GCS for investigation; no write/delete gcloud storage commands declared, and GCP compute mutations are separately blocked by the block-ec2-cloud-mutations.sh guardrail"
