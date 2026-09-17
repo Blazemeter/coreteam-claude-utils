@@ -1,7 +1,7 @@
 ---
 name: investigate-master
 description: Use when investigating why a specific BlazeMeter master/test/session behaved unexpectedly — stuck, wrong metric, silent failure, intermittent, customer-reported. Requires one or more master IDs and the environment they ran in (denv/bzdev/ci/staging/prod). Runs a preflight dependency check for that environment before starting, including whether the session's artifact files can be fetched directly via `gcloud storage` (falls back to asking the user if not). Applies across a.blazemeter.com, taurus-cloud, taurus, bzm-crane. Not for general code review or feature work. Requires the `opensearch` plugin to also be installed (this plugin does not bundle its own copy of the `opensearch-reader` MCP server).
-allowed-tools: mcp__opensearch-reader__ping, mcp__opensearch-reader__search_logs, mcp__opensearch-reader__list_indices, Read, Bash(gcloud auth list*), Bash(gcloud storage ls gs://blazemeter-gcp/masters/*), Bash(gcloud storage ls -L gs://blazemeter-gcp/masters/*), Bash(unzip -o *admin-artifacts.zip*)
+allowed-tools: mcp__opensearch-reader__ping, mcp__opensearch-reader__search_logs, mcp__opensearch-reader__list_indices, Read, Bash(gcloud auth list*)
 ---
 
 ## Why this skill exists
@@ -41,7 +41,7 @@ Do not assume prod-level access works everywhere. Verify against this table befo
 - **Artifact files can often be fetched directly via `gcloud storage` — try this before asking the user.** Session artifacts live at `gs://blazemeter-gcp/masters/<masterId>/sessions/<sessionId>/`. Two things have to hold for this to work, and neither is guaranteed — check both explicitly, don't assume:
   - **A valid, non-expired `gcloud` auth session.** Check with `gcloud auth list`. If it's expired, you cannot refresh it yourself (`gcloud auth login` is interactive) — ask the user to run `gcloud auth login` themselves, then retry.
   - **IAM read access to the `blazemeter-gcp` bucket for that identity.** Valid auth doesn't imply this. Confirm with `gcloud storage ls gs://blazemeter-gcp/masters/<masterId>/` before assuming either way.
-  - You need the **session ID**, not just the master ID, to build the full path — `gcloud storage ls .../masters/<masterId>/sessions/` to get it, or pull it from the main Mongo `sessions` collection.
+  - You need the **session ID**, not just the master ID, to build the full path — `gcloud storage ls gs://blazemeter-gcp/masters/<masterId>/sessions/` to get it, or pull it from the main Mongo `sessions` collection.
   - `bzt.log`, `jmeter.log`, `jmeter.err`/`jmeter.out`, `effective.json`/`effective.yml`, `merged.json`/`merged.yml`, the test's raw/modified JMX (or scenario) file, `artifacts.zip`, and `admin-artifacts.zip` sit directly at that session path.
   - `cloud-launcher.log`, `atop.log`/`atop.binlog`, `atop-launcher.log`, `jetpack.log`, `jetpack-download.log`, `process-cleanup.log`, and the effective/merged config are bundled *inside* `admin-artifacts.zip` — download and unzip it; don't expect them at the top level.
   - `network_checking.log` was empirically confirmed absent for at least one real session — its absence is expected sometimes, not a sign the fetch is broken.
@@ -50,17 +50,16 @@ Do not assume prod-level access works everywhere. Verify against this table befo
 
 ## The flow
 
-### Phase 0 — Understand intent before evidence
-Read the test's own definition (JMX/YAML/scenario config) for each master in question, before looking at what actually happened. Note anything customer/config-specific (private location, secrets, custom plugins, unusual scenario structure) that could be relevant. **This is an analysis step, not a fetch step — the `effective.json`/`merged.json` files it reads are fetched in Phase 1 below, which runs after this one.** Do Phase 1's fetch first if you don't already have these files, then come back and read them with this phase's question in mind ("what's supposed to happen") before moving on to what the rest of the evidence shows.
+**Redact secrets before they ever reach a report, comment, or chat message.** Test configs, the Mongo `secrets`/`taurusConfiguration` fields, and raw log payloads (confirmed in MOB-54063: a Cognito client secret value appeared directly in a config document and in an OpenSearch log line) can all carry live customer credentials, tokens, or keys. Across every phase below: when a field name looks like a secret (`*secret*`, `*token*`, `*password*`, `*key*`, `*credential*`), report its presence/type/key-name only — never its value — in anything you write back to the user, a ticket, or a commit. This applies even in prod where the value is real and in denv/bzdev where it may still be a live shared credential.
 
 ### Phase 1 — Full per-session artifact set (fetch via `gcloud storage` per Step 0, fall back to asking the user)
-Get the complete bundle, not just `bzt.log`:
+Get the complete bundle, not just `bzt.log`. **Before looking at what actually happened, read the test's own definition** — the `effective.json`/`merged.json` config fetched below — to establish what was *supposed* to happen; note anything customer/config-specific (private location, secrets, custom plugins, unusual scenario structure) that could be relevant. Do this reading step as soon as the bundle below is in hand, before moving on to Phase 2's evidence.
 - `bzt.log` — engine/Taurus orchestration log
 - `jmeter.log`, `jmeter.err` / `jmeter.out` — JMeter's own internals (never skip these — they can show detail bzt.log doesn't, e.g. listener startup, property application, and JMeter's own timers/samplers stating their actual effective config directly — this is often the single most direct confirmation of a symptom available)
 - `cloud-launcher.log` — pre-Taurus setup (proxy/secrets/env) — runs *before* bzt.log even starts; inside `admin-artifacts.zip`
 - `network_checking.log` — network connectivity specifically, if present (it's on the "OK if missing" list in taurus-cloud's own config, and has been empirically confirmed absent on at least one real session — check for it, don't assume either way)
 - `atop.log` / `atop.binlog` — OS-level resource monitor (CPU/mem/disk/network over time); inside `admin-artifacts.zip`; has a known code-level reliability caveat (a `TODO: BUG` comment sits right next to where it's started) — treat as supporting evidence, not a sole source
-- `effective.json` / `effective.yml`, `merged.json` / `merged.yml` — the actual applied test config (see Phase 0) — sit at the top level of the session folder, and are also duplicated inside `admin-artifacts.zip`
+- `effective.json` / `effective.yml`, `merged.json` / `merged.yml` — the actual applied test config, read this first to establish intent before evidence (see above) — sit at the top level of the session folder, and are also duplicated inside `admin-artifacts.zip`
 - Note `artifacts.zip` and `admin-artifacts.zip` are two *separate* bundles — customer-facing vs. admin/diagnostic (atop and cloud-launcher.log live in the admin one, unzip it to reach them)
 - **When a theory depends on *when* something was uploaded/written to cloud storage, check the object's own storage metadata (`gcloud storage ls -L <path>` — Creation/Update Time), not just what the log file's content narrates.** A log's content describes what the process did locally and can be written well before (or, via buffering, after) the data actually left the machine — the two timestamps can genuinely disagree, and only the storage metadata tells you when the upload really happened.
 
