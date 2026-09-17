@@ -92,6 +92,14 @@
       "version": "0.1.0",
       "keywords": ["pr", "pull-request", "code-review", "github", "review-comments"],
       "category": "development"
+    },
+    {
+      "name": "ci-triage",
+      "source": "./plugins/ci-triage",
+      "description": "Triage backend API_TESTS-CI failure noise from the BlazeMeter Slack monitoring channels: find persistent vs. flaky failures, identify the likely culprit commit, and check for an already-open PR before ever drafting a notification.",
+      "version": "0.1.0",
+      "keywords": ["ci", "jenkins", "slack", "triage", "blazemeter", "api-tests"],
+      "category": "development"
     }
   ]
 }

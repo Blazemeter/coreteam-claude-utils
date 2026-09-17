@@ -1,0 +1,17 @@
+{
+  "_comment": "Plugin-level hooks. Scripts live under hooks/. Remove '_comment' fields when adapting in production — JSON doesn't support comments.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "_comment": "Hard backstop for ci-culprit-check's 'never sends a Slack message on its own' promise — blocks the two real-send tools; slack_send_message_draft and every read/search tool pass through.",
+        "matcher": "mcp__claude_ai_Slack__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/block-slack-real-send.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
