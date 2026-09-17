@@ -80,6 +80,7 @@ exceptions:
   - artifact: master-investigation/skills/investigate-master
     tools:
       - Bash(gcloud auth list*)
-      - Bash(gcloud storage ls*)
-      - Bash(gcloud storage cp gs://blazemeter-gcp/masters/*)
-    justification: "read-only fetch/listing of BlazeMeter session artifacts from GCS for investigation; the cp exception is source-scoped to gs://blazemeter-gcp/masters/* so it can only ever copy an existing investigation artifact, never upload/overwrite from a local path or an unrelated bucket, and GCP compute mutations are separately blocked by the block-ec2-cloud-mutations.sh guardrail"
+      - Bash(gcloud storage ls gs://blazemeter-gcp/masters/*)
+      - Bash(gcloud storage ls -L gs://blazemeter-gcp/masters/*)
+      - Bash(unzip -o *admin-artifacts.zip*)
+    justification: "read-only listing of BlazeMeter session artifacts from GCS for investigation, scoped to gs://blazemeter-gcp/masters/* so it can't enumerate an unrelated bucket; local extraction is limited to admin-artifacts.zip (already downloaded, trusted, BlazeMeter-internal). `gcloud storage cp` is deliberately NOT pre-approved here: this repo's Bash(pattern*) matching is a plain command-line prefix match with no argument-position awareness, so a source-scoped pattern like `gcloud storage cp gs://blazemeter-gcp/masters/*` still leaves the destination argument free (e.g. `... cp gs://blazemeter-gcp/masters/123 gs://unrelated-bucket/` matches and writes) — there is no prefix pattern that can pin both ends of a two-argument command. cp is left to the normal interactive permission prompt per invocation instead of a standing exception; the skill's Step 0 already has a working fallback (ask the user for the files) for when that isn't granted."

@@ -1,7 +1,7 @@
 ---
 name: investigate-master
-description: Use when investigating why a specific BlazeMeter master/test/session behaved unexpectedly — stuck, wrong metric, silent failure, intermittent, customer-reported. Requires one or more master IDs and the environment they ran in (denv/bzdev/ci/staging/prod). Runs a preflight dependency check for that environment before starting, including whether the session's artifact files can be fetched directly via `gcloud storage` (falls back to asking the user if not). Applies across a.blazemeter.com, taurus-cloud, taurus, bzm-crane. Not for general code review or feature work.
-allowed-tools: mcp__opensearch-reader__ping, mcp__opensearch-reader__search_logs, mcp__opensearch-reader__list_indices, Bash(gcloud auth list*), Bash(gcloud storage ls*), Bash(gcloud storage cp gs://blazemeter-gcp/masters/*)
+description: Use when investigating why a specific BlazeMeter master/test/session behaved unexpectedly — stuck, wrong metric, silent failure, intermittent, customer-reported. Requires one or more master IDs and the environment they ran in (denv/bzdev/ci/staging/prod). Runs a preflight dependency check for that environment before starting, including whether the session's artifact files can be fetched directly via `gcloud storage` (falls back to asking the user if not). Applies across a.blazemeter.com, taurus-cloud, taurus, bzm-crane. Not for general code review or feature work. Requires the `opensearch` plugin to also be installed (this plugin does not bundle its own copy of the `opensearch-reader` MCP server).
+allowed-tools: mcp__opensearch-reader__ping, mcp__opensearch-reader__search_logs, mcp__opensearch-reader__list_indices, Read, Bash(gcloud auth list*), Bash(gcloud storage ls gs://blazemeter-gcp/masters/*), Bash(gcloud storage ls -L gs://blazemeter-gcp/masters/*), Bash(unzip -o *admin-artifacts.zip*)
 ---
 
 ## Why this skill exists
@@ -36,8 +36,7 @@ Do not assume prod-level access works everywhere. Verify against this table befo
 
 "Available" above assumes *your own* credentials/VPN/session are valid for that environment — it is not a claim that the environment works with no setup. Always confirm with a live ping rather than trusting the table alone.
 
-- Ping OpenSearch for the given env first (`mcp__opensearch-reader__ping`, from the `opensearch` plugin). If it fails, report that and stop rather than searching further with no results.
-- **A first-attempt failure on OpenSearch/Mongo in `prod` is often just a disconnected VPN, not real unavailability** — confirmed twice (MOB-54063): OpenSearch 403'd and Mongo main/bigdata both timed out with an Atlas IP-allowlist error, and both resolved immediately once the user reconnected VPN and the connections were re-dialed. Before reporting a leg as blocked, ask the user to check VPN and retry once; only report it as genuinely unavailable/unconfigured after that retry still fails.
+- Ping OpenSearch for the given env first (`mcp__opensearch-reader__ping`, from the `opensearch` plugin). **A first-attempt failure in `prod` is often just a disconnected VPN, not real unavailability** — confirmed twice (MOB-54063): OpenSearch 403'd and Mongo main/bigdata both timed out with an Atlas IP-allowlist error, and both resolved immediately once the user reconnected VPN and the connections were re-dialed. Ask the user to check VPN and retry once before concluding anything. Only after that retry still fails should you report the leg as unavailable and stop rather than searching further with no results.
 - If Mongo access is needed for the given env and isn't configured, say so explicitly — don't skip Phase 2 quietly.
 - **Artifact files can often be fetched directly via `gcloud storage` — try this before asking the user.** Session artifacts live at `gs://blazemeter-gcp/masters/<masterId>/sessions/<sessionId>/`. Two things have to hold for this to work, and neither is guaranteed — check both explicitly, don't assume:
   - **A valid, non-expired `gcloud` auth session.** Check with `gcloud auth list`. If it's expired, you cannot refresh it yourself (`gcloud auth login` is interactive) — ask the user to run `gcloud auth login` themselves, then retry.
@@ -52,7 +51,7 @@ Do not assume prod-level access works everywhere. Verify against this table befo
 ## The flow
 
 ### Phase 0 — Understand intent before evidence
-Read the test's own definition (JMX/YAML/scenario config — `effective.json`/`merged.json`, if included in the artifact bundle) for each master in question. Establish what's *supposed* to happen before looking at what did. Note anything customer/config-specific (private location, secrets, custom plugins, unusual scenario structure) that could be relevant.
+Read the test's own definition (JMX/YAML/scenario config) for each master in question, before looking at what actually happened. Note anything customer/config-specific (private location, secrets, custom plugins, unusual scenario structure) that could be relevant. **This is an analysis step, not a fetch step — the `effective.json`/`merged.json` files it reads are fetched in Phase 1 below, which runs after this one.** Do Phase 1's fetch first if you don't already have these files, then come back and read them with this phase's question in mind ("what's supposed to happen") before moving on to what the rest of the evidence shows.
 
 ### Phase 1 — Full per-session artifact set (fetch via `gcloud storage` per Step 0, fall back to asking the user)
 Get the complete bundle, not just `bzt.log`:
