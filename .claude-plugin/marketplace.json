@@ -48,8 +48,8 @@
     {
       "name": "jira",
       "source": "./plugins/jira",
-      "description": "Create/transition Blazemeter MOB Jira tickets — board 5348, Task, Product/Scrum-Team/Sprint fields, assignee = repo owner, status In Review, caller-supplied labels (e.g. mend_orch), bounded 429 backoff. Ticket summary/name is caller-supplied. Can be created before a PR exists, then updated with the PR link.",
-      "version": "0.3.1",
+      "description": "Create/transition Blazemeter MOB Jira tickets — board 5348, Task, Product/Scrum-Team/Sprint fields, assignee = repo owner, status In Progress, caller-supplied labels (e.g. mend_orch), optional parent issue (parent_key in jira config), bounded 429 backoff. Ticket summary/name is caller-supplied. Can be created before a PR exists, then updated with the PR link.",
+      "version": "0.3.2",
       "keywords": ["jira", "mob", "atlassian", "ticket"],
       "category": "development"
     },
@@ -57,7 +57,7 @@
       "name": "mend-blz",
       "source": "./plugins/mend-blz",
       "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → [crane only] a.blazemeter.com branch → denv deploy + fix-related API tests → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link → [crane only] mend-finalize follow-up message), registry-driven via services.json.",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
     },
