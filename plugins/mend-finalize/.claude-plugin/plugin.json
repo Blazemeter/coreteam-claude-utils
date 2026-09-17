@@ -1,0 +1,8 @@
+{
+  "name": "mend-finalize",
+  "description": "Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, fetches the real semantic version, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<branch> to the real version, opens the a.blazemeter.com PR into develop, and updates the MOB ticket. Triggered by /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-ticket>.",
+  "version": "0.1.1",
+  "author": { "name": "Tehila" },
+  "license": "MIT",
+  "keywords": ["mend", "crane", "harbor", "version", "blazemeter", "finalize"]
+}

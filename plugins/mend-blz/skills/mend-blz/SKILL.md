@@ -55,7 +55,7 @@ orchestrator's `config/services.json`) a per-component entry with these fields:
 
 # Fix loop
 
-Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → denv deploy + fix-related API tests (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link.** Local tests run before push (fail fast); Jenkins-green, the denv deploy, and the fix-related API tests are all hard gates — nothing downstream runs until the branch build is green, its image deploys green in denv, **and** the API tests covering the fixed area pass. The Confluence report runs right after the gates and **before** Jira/PR, and regardless of how the run ends (including a red-build, failed-denv-deploy, or failed-API-test stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
+Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → denv deploy + fix-related API tests (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link → [crane only] post mend-finalize follow-up command.** Local tests run before push (fail fast); Jenkins-green, the denv deploy, and the fix-related API tests are all hard gates — nothing downstream runs until the branch build is green, its image deploys green in denv, **and** the API tests covering the fixed area pass. The Confluence report runs right after the gates and **before** Jira/PR, and regardless of how the run ends (including a red-build, failed-denv-deploy, or failed-API-test stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
 
 1. **Fetch alerts → triage to the requested scope** (default HIGH+CRITICAL, case-insensitive) — via **mend**. Resolve the project token first. Triage by the alert set, not by what's in flight (fix an in-scope alert even if it's in another open PR). Only fix alerts in the component's `stack` ecosystem; defer the rest to the summary.
 2. **Create the dated branch** `mend-fix-<YYYYMMDD-HHMMSS>` off `integration_branch` — via **github**.
@@ -154,7 +154,18 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
    afterward. If `nojira` was set, open the PR without a ticket id in the title.
 11. **Update the MOB ticket's description** to add the PR link, now that the PR exists — via
     **jira**. Skip when `nojira` (no ticket to update).
-12. **Write the summary table** — one row per alert acted on:
+12. **[Crane repos only] Post the mend-finalize follow-up** — after step 11, output this message
+    clearly so the user can copy it into Slack once the crane PR is merged:
+
+    > **Crane PR open:** `<PR URL>`
+    > After it merges to `<integration_branch>` and the CI build completes, run:
+    > `/orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-ticket>`
+    > This pins the real semantic version in `a.blazemeter.com` and opens its PR.
+
+    Use the actual values — e.g. `--target torero --scope mend-fix-20260916-123456,MOB-1234`.
+    For non-crane repos (`crane` absent or `false`) skip this step entirely.
+
+13. **Write the summary table** — one row per alert acted on:
 
     | Repository | Alert (CVE / library) | Fix (from → to) | Succeeded | Notes |
     |------------|-----------------------|-----------------|-----------|-------|
@@ -166,7 +177,7 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
 
 | Flag | Effect |
 |------|--------|
-| *(none)* | Full loop as above (Jenkins gate → [crane only] a.blazemeter.com branch → denv-deploy + fix-related API-test gate → Confluence → Jira → PR → Jira description update). Red build, failed denv deploy, **or** failed fix-related API test → fix-forward up to 3; still failing → stop + Notes. |
+| *(none)* | Full loop as above (Jenkins gate → [crane only] a.blazemeter.com branch → denv-deploy + fix-related API-test gate → Confluence → Jira → PR → Jira description update → [crane only] mend-finalize follow-up message). Red build, failed denv deploy, **or** failed fix-related API test → fix-forward up to 3; still failing → stop + Notes. |
 | `test` | Skip the Mend API; read pre-seeded JSON from `/tmp/mend-<component>-vulns.json` (see **mend**). |
 | `nojenkins` | Skip the Jenkins-green gate — open the PR/Jira without waiting for the build. |
 | `nojira` | Skip Jira create and the later description update; the PR opens without a ticket id in the title. |
