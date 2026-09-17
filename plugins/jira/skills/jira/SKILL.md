@@ -1,6 +1,6 @@
 ---
 name: jira
-description: Create and transition Blazemeter MOB Jira tickets — project MOB / board 5348, type Task, custom fields (Product=Blazemeter, Scrum Team=Terra, active sprint), assignee resolved from the repo owner display name, status transitioned to In Review, with a structured description linking the PR and Jenkins build. The ticket's summary/name is supplied by whichever skill invokes this one — this skill doesn't invent ticket titles. Load when a flow needs to file or update a MOB ticket.
+description: Create and transition Blazemeter MOB Jira tickets — project MOB / board 5348, type Task, custom fields (Product=Blazemeter, Scrum Team=Terra, active sprint), assignee resolved from the repo owner display name, status transitioned to In Progress, with a structured description linking the PR and Jenkins build. The ticket's summary/name is supplied by whichever skill invokes this one — this skill doesn't invent ticket titles. Load when a flow needs to file or update a MOB ticket.
 ---
 
 # Create the MOB ticket
@@ -13,10 +13,13 @@ Ids below are the known MOB values — treat them as config the caller may overr
 - **Scrum Team = Terra** — `customfield_10067` (id `21406`)
 - **Sprint = active sprint** of board 5348 — `customfield_10020`
 - **Assignee = the repo `owner`** — resolve the display name → accountId via `/rest/api/3/user/search?query=<owner>`; if `owner` is empty, fall back to `tcohen`. (Assignee is how ownership is tracked — there's no GitHub reviewer.)
-- **Status → `In Review`** — transition id `61`.
+- **Status → `In Progress`** — transition id `61`.
 - **Labels** — set `fields.labels` to whatever the caller passes (Jira labels allow no spaces; use
   `_`). The **mend-blz** caller passes **`mend_orch`** so every orchestrator-created ticket is
   filterable (JQL `labels = mend_orch`); include any others the caller supplies alongside it.
+- **Parent** — if `parent_key` is present in the Jira config (e.g. `"parent_key": "MOB-51690"`),
+  set `fields.parent = {"key": "<parent_key>"}` on ticket creation so the new ticket is a child
+  of that issue. Omit the field entirely when `parent_key` is absent or empty.
 
 ## Summary & description
 
