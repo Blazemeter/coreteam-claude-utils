@@ -81,5 +81,5 @@ exceptions:
     tools:
       - Bash(gcloud auth list*)
       - Bash(gcloud storage ls*)
-      - Bash(gcloud storage cp*)
-    justification: "read-only fetch/listing of BlazeMeter session artifacts from GCS for investigation; no write/delete gcloud storage commands declared, and GCP compute mutations are separately blocked by the block-ec2-cloud-mutations.sh guardrail"
+      - Bash(gcloud storage cp gs://blazemeter-gcp/masters/*)
+    justification: "read-only fetch/listing of BlazeMeter session artifacts from GCS for investigation; the cp exception is source-scoped to gs://blazemeter-gcp/masters/* so it can only ever copy an existing investigation artifact, never upload/overwrite from a local path or an unrelated bucket, and GCP compute mutations are separately blocked by the block-ec2-cloud-mutations.sh guardrail"
