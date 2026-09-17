@@ -28,7 +28,7 @@ Distilled from a CI-failure investigation (`test_credits_overage.py`, MOB-50523)
 Release branches follow `release-yyyy-mm-dd` in the app repo (e.g. `a.blazemeter.com`), cut roughly every 2 weeks. Don't trust the branch's HEAD commit date — hotfix cherry-picks land on it after the cut and move it forward. Get the true cut date instead:
 ```
 gh api repos/<org>/<repo>/branches --paginate --jq '.[].name' | grep -E '^release-[0-9]{4}-[0-9]{2}-[0-9]{2}$' | sort | tail -3
-gh api repos/<org>/<repo>/compare/develop...<latest-release-branch> --jq '.merge_base_commit.commit.author.date'
+gh api repos/<org>/<repo>/compare/develop...<latest-release-branch> --jq '.merge_base_commit.commit.committer.date'
 ```
 That merge-base date is the window start. Sanity-check the ~2-week cadence against the previous release branch's cut date.
 
@@ -40,11 +40,11 @@ Read both channels from that cut date through now (`slack_read_channel` with `ol
 For a persistent failure, find the exact day it flipped from passing to failing — that's more informative than "it's been red for N days," since it pins down which commit(s) landed between the last green run and the first red one.
 
 ### Phase 3 — Identify the candidate commit(s)
-Cross-reference the flip date against commit history in the implicated repo:
+Cross-reference the flip date against commit history in the implicated repo. Use `since=<window-start-ISO8601>` (from Phase 1) rather than a fixed `per_page`, and `--paginate` so a busy repo with more than one page of commits in the window doesn't silently truncate — sort by **committer date**, not author date, since a cherry-pick/hotfix retains its original author timestamp but committer date reflects when it actually landed:
 ```
-gh api "repos/<org>/<repo>/commits?sha=<branch>&per_page=30" --jq '.[] | "\(.sha[0:9]) \(.commit.author.date) \(.author.login // .commit.author.name): \(.commit.message | split("\n")[0])"'
+gh api --paginate "repos/<org>/<repo>/commits?sha=<branch>&since=<window-start-ISO8601>" --jq '.[] | "\(.sha[0:9]) \(.commit.committer.date) \(.author.login // .commit.author.name): \(.commit.message | split("\n")[0])"'
 ```
-Prefer a commit whose description semantically matches the failing test's subject (e.g. a "credits/VUH enforcement" commit against a `test_credits_overage.py` failure) over just picking whatever's chronologically closest. Confirm by reading the actual test file (`gh api repos/<org>/<repo>/contents/<path> --jq '.content' | base64 -d`) and the implicated source file/PR diff — don't stop at "the commit message sounds related."
+Prefer a commit whose description semantically matches the failing test's subject (e.g. a "credits/VUH enforcement" commit against a `test_credits_overage.py` failure) over just picking whatever's chronologically closest. Confirm by reading the actual test file **pinned to the branch under investigation** (`gh api "repos/<org>/<repo>/contents/<path>?ref=<branch>" --jq '.content' | base64 -d` — omitting `ref` silently reads the default branch, which can differ from the release branch these failures are correlated against) and the implicated source file/PR diff — don't stop at "the commit message sounds related."
 
 If the failure already existed at the very first run inside the sprint window, say so plainly rather than forcing a within-window answer — the root cause predates this sprint and needs a wider bisection outside this skill's default scope.
 
@@ -52,13 +52,14 @@ If the failure already existed at the very first run inside the sprint window, s
 This is the step that's easy to skip and changes the outcome. Search **open** PRs (not just merged commits) in every repo touched by Phase 3, plus the repo owning the failing test:
 ```
 gh pr list -R <org>/<repo> --state open --search "<jira-id> <keywords>" --json number,title,author,url,createdAt
-gh pr list -R <org>/<repo> --state open --limit 50 --json number,title,author,url,createdAt   # manual scan if search misses it
+gh pr list -R <org>/<repo> --state open --json number --jq length   # check total open-PR count first
+gh pr list -R <org>/<repo> --state open --limit <at least that count> --json number,title,author,url,createdAt   # manual scan if search misses it — a fixed --limit 50 can silently truncate and miss an older match
 ```
-If a matching open PR exists, inspect it (`gh pr view <n> --json body,files,reviews,statusCheckRollup,state,mergeable`) to confirm it actually targets this gap. If it does:
-- **Stop here. Do not draft a notification.** Report the PR (author, state, review/approval status, whether CI is green) as "already being handled" instead.
+If a matching open PR exists, inspect it (`gh pr view <n> -R <org>/<repo> --json body,files,reviews,statusCheckRollup,state,mergeable` — always pass `-R` explicitly, since a bare `gh pr view <n>` resolves against whatever repo the current working directory happens to be checked out to, not necessarily the one being investigated) to confirm it actually targets this gap. If it does:
+- **Stop investigating *this failure* — do not draft a notification for it.** Report the PR (author, state, review/approval status, whether CI is green) as "already being handled" instead, then **continue to the next persistent failure** — an open PR covering one failure doesn't excuse skipping the verdict for the others.
 - If it's open but stale/unreviewed for a while, it's fine to note that as a mild nudge ("still needs review/merge") rather than a blame notification.
 
-Only proceed to Phase 5 if no open PR covers it.
+Only proceed to Phase 5 **for this specific failure** if no open PR covers it; every other persistent failure still goes through its own Phase 4 → Phase 5 independently.
 
 ### Phase 5 — Resolve identity best-effort, then draft (never send, don't pause to ask)
 GitHub handles don't map cleanly to Slack accounts. Try `slack_search_users` on the commit author's name/handle first. If that doesn't give an exact match, fall back to the org's `firstname + lastname-initial + number` convention (e.g. `avishaiw12` → Avishai Weingarten) as a best-effort guess. Don't stop to confirm this with the user — proceed with the best-effort match and flag it as "best guess, please verify" in the final verdict instead of pausing mid-run.
