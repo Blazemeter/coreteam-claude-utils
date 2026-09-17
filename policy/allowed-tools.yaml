@@ -77,3 +77,7 @@ forbidden:
 #         - Bash(terraform show*)
 #       justification: "skill produces plan summaries; cannot run apply or destroy"
 exceptions:
+  - artifact: master-investigation/skills/investigate-master
+    tools:
+      - Bash(gcloud auth list*)
+    justification: "gcloud auth list only inspects local credential state and has no destructive effect regardless of what a Bash(pattern*) exception's trailing wildcard might allow to follow it. gcloud storage ls/ls -L/cp and unzip are deliberately NOT pre-approved: this repo's Bash(pattern*) matching is a plain command-line prefix/substring match with no argument-position or shell-metacharacter awareness, so a source-scoped pattern (e.g. gcloud storage ls gs://blazemeter-gcp/masters/*) cannot rule out an appended chained command (`; gcloud storage rm ...`) or, for cp, an arbitrary destination bucket — and unlike AWS S3/DynamoDB/Redis/Mongo, this repo has no PreToolUse hook that blocks GCS mutations as a backstop (block-ec2-cloud-mutations.sh only matches `gcloud compute`, not `gcloud storage`). Until a validated wrapper script or an argv-aware permission primitive exists, these commands fall to the normal interactive permission prompt per invocation; the skill's Step 0 already has a working fallback (ask the user for the files) for when that isn't granted."
