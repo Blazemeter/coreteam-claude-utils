@@ -1,6 +1,6 @@
 ---
 name: mend-finalize
-description: Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, fetches the real semantic version from the build displayName, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<fix-branch> to the real semantic version via GitHub API, opens the a.blazemeter.com PR into develop, and updates the MOB ticket description with the PR link. Triggered after the user merges the crane PR opened by mend-blz phase 1.
+description: Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, reads the real semantic version from the VERSION file at the build's exact git SHA, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<fix-branch> to the real semantic version via GitHub API, opens the a.blazemeter.com PR into develop, and updates the MOB ticket description with the PR link. Triggered after the user merges the crane PR opened by mend-blz phase 1.
 ---
 
 # When to use
@@ -52,23 +52,30 @@ Poll `<jenkins_folder>/<integration_branch>` builds for a completed `SUCCESS` bu
 ```bash
 # Poll every 60s, up to 60 minutes
 curl -s -u "$JENKINS_USER:$JENKINS_API_TOKEN" \
-  "https://blazect-jenkins.blazemeter.com/job/<jenkins_folder>/job/<integration_branch>/api/json?tree=builds[number,result,timestamp,displayName,building]{0,10}"
+  "https://blazect-jenkins.blazemeter.com/job/<jenkins_folder>/job/<integration_branch>/api/json?tree=builds[number,result,timestamp,building,actions[lastBuiltRevision[SHA1]]]{0,10}"
 ```
 
 Pick the build where:
 - `timestamp` (ms) > `merge_timestamp` (convert to ms)
 - `result == "SUCCESS"` (not still `building`)
 
+Record the build's git SHA from `actions[].lastBuiltRevision.SHA1`.
+
 If no such build found after 60 minutes → stop and reply:
 > "Build after merge not found within 60 minutes. Check `<jenkins_folder>/<integration_branch>` manually, then re-run."
 
-## 4. Extract the semantic version
+## 4. Read the semantic version from the VERSION file
 
-The master build `displayName` format: `#<N> | <version>` (e.g. `#1066 | 4.6.188`).
+Do **not** parse the build `displayName` — another commit may have landed since the merge and bumped the version, making displayName unreliable. Instead, read the `VERSION` file from the repo at the exact git SHA of the build found in step 3:
 
-```python
-version = displayName.split(" | ")[1].strip()   # → "4.6.188"
+```bash
+# Get the VERSION file content at the build's git SHA
+gh api "/repos/<repo>/contents/VERSION?ref=<build_sha>" \
+  --jq '.content' | python3 -c "import sys,base64; print(base64.b64decode(sys.stdin.read()).decode().strip())"
+# → "4.6.188"
 ```
+
+This guarantees the version matches exactly what was built for this merge, regardless of any subsequent commits.
 
 ## 5. Update HarborVersionsSettings.php in a.blazemeter.com branch
 
