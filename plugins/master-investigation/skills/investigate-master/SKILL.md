@@ -1,7 +1,7 @@
 ---
 name: investigate-master
 description: Use when investigating why a specific BlazeMeter master/test/session behaved unexpectedly — stuck, wrong metric, silent failure, intermittent, customer-reported. Requires one or more master IDs and the environment they ran in (denv/bzdev/ci/staging/prod). Runs a preflight dependency check for that environment before starting, including whether the session's artifact files can be fetched directly via `gcloud storage` (falls back to asking the user if not). Applies across a.blazemeter.com, taurus-cloud, taurus, bzm-crane. Not for general code review or feature work. Requires the `opensearch` plugin to also be installed (this plugin does not bundle its own copy of the `opensearch-reader` MCP server).
-allowed-tools: mcp__opensearch-reader__ping, mcp__opensearch-reader__search_logs, mcp__opensearch-reader__list_indices, Read, Bash(gcloud auth list*)
+allowed-tools: mcp__opensearch-reader__ping, mcp__opensearch-reader__search_logs, mcp__opensearch-reader__list_indices, Read, Bash(gcloud auth list*), Bash(gcloud logging read*)
 ---
 
 ## Why this skill exists
