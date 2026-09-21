@@ -81,7 +81,7 @@
       "name": "master-investigation",
       "source": "./plugins/master-investigation",
       "description": "Structured playbook for investigating a misbehaving BlazeMeter master/test/session (stuck, wrong metric, silent failure, intermittent, customer-reported) across denv/bzdev/ci/staging/prod — composes OpenSearch log search, Mongo (main + bigdata) state, GCS session artifacts, and source-code verification across taurus/taurus-cloud/a.blazemeter.com/bzm-crane.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "keywords": ["blazemeter", "master", "session", "taurus", "investigation", "incident", "debugging"],
       "category": "observability"
     },

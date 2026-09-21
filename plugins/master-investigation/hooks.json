@@ -1,0 +1,17 @@
+{
+  "_comment": "Plugin-level hooks. Scripts live under hooks/. Remove '_comment' fields when adapting in production — JSON doesn't support comments.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "_comment": "Defense-in-depth for the Phase 1 GCS artifact fetch — base-tools' own EC2/GCP hook only covers `gcloud compute`, not `gcloud storage`, so this plugin needs its own backstop against the always-destructive gcloud storage verbs.",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/block-gcs-destructive-ops.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
