@@ -1,6 +1,6 @@
 ---
 name: mend-finalize
-description: Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, reads the real semantic version from the VERSION file at HEAD of the integration branch, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<fix-branch> to the real semantic version via GitHub API, opens the a.blazemeter.com PR into develop, and updates the MOB ticket description with the PR link. Triggered after the user merges the crane PR opened by mend-blz phase 1.
+description: Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, extracts the real semantic version from the build displayName, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<fix-branch> to the real semantic version via GitHub API, opens the a.blazemeter.com PR into develop, and updates the MOB ticket description with the PR link. Triggered after the user merges the crane PR opened by mend-blz phase 1.
 ---
 
 # When to use
@@ -62,14 +62,13 @@ Pick the build where:
 If no such build found after 60 minutes → stop and reply:
 > "Build after merge not found within 60 minutes. Check `<jenkins_folder>/<integration_branch>` manually, then re-run."
 
-## 4. Read the semantic version
+## 4. Extract the semantic version
 
-Once the successful build is confirmed, read the `VERSION` file from the **HEAD of `<integration_branch>`** — the CI increments the version as part of the build, so HEAD reflects what was actually built and pushed to GCR. If subsequent commits landed after the mend merge, HEAD may be newer than that specific build's displayName — that is expected; use the HEAD value.
+Use the `displayName` of the **specific build identified in step 3** — this is the exact version Jenkins built and tagged in GCR, unaffected by any subsequent commits to the integration branch.
 
-```bash
-gh api "/repos/<repo>/contents/VERSION?ref=<integration_branch>" \
-  --jq '.content' | python3 -c "import sys,base64; print(base64.b64decode(sys.stdin.read()).decode().strip())"
-# → "4.6.190"
+```python
+# displayName format: "#<N> | <version>" e.g. "#1498 | 4.6.190"
+version = displayName.split(" | ")[1].strip()   # → "4.6.190"
 ```
 
 ## 5. Update HarborVersionsSettings.php in a.blazemeter.com branch
