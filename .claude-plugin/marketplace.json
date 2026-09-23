@@ -57,7 +57,7 @@
       "name": "mend-blz",
       "source": "./plugins/mend-blz",
       "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → [crane only] a.blazemeter.com branch → denv deploy + fix-related API tests → Confluence report → Jira created first → PR titled with the ticket id → Jira description updated with the PR link → [crane only] mend-finalize follow-up message), registry-driven via services.json.",
-      "version": "0.7.1",
+      "version": "0.7.2",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
     },

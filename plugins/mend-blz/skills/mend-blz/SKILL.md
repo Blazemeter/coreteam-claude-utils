@@ -1,6 +1,6 @@
 ---
 name: mend-blz
-description: End-to-end Mend vulnerability remediation for Blazemeter components (a.blazemeter, dagger, search, crane components). Composes the mend, dep-remediation, jenkins, github, and jira skills into one loop — Mend alerts → dependency fix on a fresh date-stamped branch → Jenkins green → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → denv deploy + fix-related API tests (fix verified in denv) → Confluence report → Jira (MOB, created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link. Load when the user wants to fix/remediate Mend/WhiteSource vulnerabilities for a Blazemeter service.
+description: End-to-end Mend vulnerability remediation for Blazemeter components (a.blazemeter, dagger, search, crane components). Composes the mend, dep-remediation, jenkins, github, and jira skills into one loop — Mend alerts → dependency fix on a fresh date-stamped branch → Jenkins green → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → denv deploy + fix-related API tests (fix verified in denv) → Confluence report → Jira (MOB, created first) → squash commits with child ticket id → PR (opened with the ticket id already in the title) → Jira description updated with the PR link. Load when the user wants to fix/remediate Mend/WhiteSource vulnerabilities for a Blazemeter service.
 ---
 
 # When to use
@@ -16,8 +16,8 @@ composer — the reusable knowledge lives in five skills it drives:
 | [Crane repos only] Via GitHub API (no clone): create matching branch in `a.blazemeter.com`, patch `HarborVersionsSettings.php` version to `latest-<fix-branch>`, commit | this skill (step 6b) |
 | Deploy the branch's image to denv, then run the fix-related API tests against it and gate on them | **jenkins** |
 | Upsert currently-unfixable libraries to the Confluence tracking page | this skill (see [references/mend-confluence-report.md](references/mend-confluence-report.md)) |
-| Create the MOB ticket (In Progress, assignee = owner) **before the PR exists** — this skill supplies the ticket summary; description covers dependencies fixed + Jenkins, and links back to Confluence when there were deferred alerts | **jira** |
-| Dated branch, commit/push, open PR **with the ticket id already in the title** | **github** |
+| Create the MOB ticket (In Progress, assignee = owner) **before the PR exists** — description covers dependencies fixed + Jenkins + Confluence link when deferred alerts exist | **jira** |
+| Squash all commits to one with child ticket id, force-push, open PR **with the ticket id already in the title** (commits used `parent_key` prefix during CI to satisfy the Jira-id-in-commit check) | **github** |
 | Edit the MOB ticket's description to add the PR link, now that the PR exists | **jira** |
 
 These auto-load alongside this recipe; defer to them for the "how," and follow the order/gates below.
@@ -55,13 +55,13 @@ orchestrator's `config/services.json`) a per-component entry with these fields:
 
 # Fix loop
 
-Order: **alerts → branch → fix → local compile+unit-test → push → Jenkins green (GATE) → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php → [crane only] BACKEND-CI green (GATE) → denv deploy + fix-related API tests (GATE) → Confluence report → Jira (created first) → PR (opened with the ticket id already in the title) → Jira description updated with the PR link → [crane only] post mend-finalize follow-up command.** Local tests run before push (fail fast); Jenkins-green, the denv deploy, and the fix-related API tests are all hard gates — nothing downstream runs until the branch build is green, its image deploys green in denv, **and** the API tests covering the fixed area pass. The Confluence report runs right after the gates and **before** Jira/PR, and regardless of how the run ends (including a red-build, failed-denv-deploy, or failed-API-test stop) — it only needs step 1's triage + the fix/build outcome, not a PR or ticket, and its page needs to already reflect this run by the time the Jira ticket (which may link to it) is created. Jira is created **before** the PR specifically so the PR title always carries the `MOB-####` id from creation — it is never tagged on after the fact.
+Order: **alerts → branch → fix → local compile+unit-test → push (commits prefixed `<parent_key>: `) → Jenkins green (GATE) → [crane only] a.blazemeter.com branch with updated HarborVersionsSettings.php (commit prefixed `<parent_key>: `) → [crane only] BACKEND-CI green (GATE) → denv deploy + fix-related API tests (GATE) → Confluence report → Jira created → squash commits to one with child ticket id + force-push → PR (opened with ticket id in title) → Jira description updated with PR link → [crane only] post mend-finalize follow-up command.** Commits use `parent_key` (always known from jira config) to satisfy the repo's `Jira id in the title` GitHub branch protection required status check; once the child ticket is created (step 9) the commits are squashed to one with the child ticket id before the PR is opened (step 9.5). Jenkins-green, denv deploy, and API-test gates are all hard — nothing downstream runs until all pass. Confluence report runs after gates regardless of outcome.
 
 1. **Fetch alerts → triage to the requested scope** (default HIGH+CRITICAL, case-insensitive) — via **mend**. Resolve the project token first. Triage by the alert set, not by what's in flight (fix an in-scope alert even if it's in another open PR). Only fix alerts in the component's `stack` ecosystem; defer the rest to the summary.
 2. **Create the dated branch** `mend-fix-<YYYYMMDD-HHMMSS>` off `integration_branch` — via **github**.
 3. **Apply the fix** for every in-scope alert, batched into the branch, per the `stack` — via **dep-remediation** (golden rule, advisory cross-check, defer breaking majors to Notes).
 4. **Compile + run unit tests locally** per stack — via **dep-remediation**. Only push if green.
-5. **Commit + push** the branch — via **github**.
+5. **Commit + push** the branch — via **github**. Prefix every commit message with the parent ticket id from the Jira config (`parent_key`): `<parent_key>: <description>`. The child ticket does not exist yet — the parent key satisfies the repo's `Jira id in the title` GitHub branch protection required status check. After the child ticket is created (step 9), commits are squashed and updated to the child ticket id (step 9.5).
 6. **Trigger the build with `PUSH_TO_GCR=true` + `PERFORM_WHITESOURCE_SCAN=true` and poll until
    green** — via **jenkins**. Red → fix-forward, cap **3 attempts**; still red → stop (no PR/Jira,
    but still do step 8) + Notes. Expect **two builds** after the push: the branch's own
@@ -101,7 +101,7 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
 
     NEW_CONTENT=$(echo "$PATCHED" | python3 -c "import sys,base64; print(base64.b64encode(sys.stdin.buffer.read()).decode())")
     gh api --method PUT /repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH \
-      -f message="<fix-branch>: pin <harbor_php_key> to latest-<fix-branch>" \
+      -f message="<parent_key>: <fix-branch>: pin <harbor_php_key> to latest-<fix-branch>" \
       -f content="$NEW_CONTENT" \
       -f sha="$FILE_SHA" \
       -f branch="<fix-branch>"
@@ -155,6 +155,15 @@ Order: **alerts → branch → fix → local compile+unit-test → push → Jenk
    link; if step 8 reported any deferred/unfixed alerts, it also links to the Confluence page (see
    the **jira** skill's description ordering) — omit that line if step 8 had nothing to report or
    was skipped via `noconfluence`. It cannot yet include a PR link (see step 11).
+9.5. **Squash commits and update to child ticket id** — now that the child ticket exists, squash all
+   commits on the fix branch into one and update the commit message to use the child ticket id:
+   ```bash
+   git reset --soft $(git merge-base HEAD origin/<integration_branch>)
+   git commit -m "<ticket>: mend: fix Mend vulnerabilities in <repo>"
+   git push --force-with-lease origin <fix-branch>
+   ```
+   Skip when `nojira`. This replaces the temporary `<parent_key>:` prefix with the child ticket id
+   so the final commit history is clean. Do not wait for a new CI build — the code is unchanged.
 10. **Open the PR** into `integration_branch` — via **github**. The MOB ticket already exists
    (step 9), so the title carries the `MOB-####` id **from creation** — never tagged on
    afterward. If `nojira` was set, open the PR without a ticket id in the title.
