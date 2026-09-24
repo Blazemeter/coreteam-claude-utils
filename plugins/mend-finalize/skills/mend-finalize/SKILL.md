@@ -95,7 +95,7 @@ print(result, end='')
 NEW_CONTENT=$(echo "$PATCHED" | python3 -c "import sys,base64; print(base64.b64encode(sys.stdin.buffer.read()).decode())")
 
 gh api --method PUT "/repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH" \
-  -f message="<fix-branch>: pin <harbor_php_key> to <version>" \
+  -f message="<ticket>: <fix-branch>: pin <harbor_php_key> to <version>" \
   -f content="$NEW_CONTENT" \
   -f sha="$FILE_SHA" \
   -f branch="<fix-branch>"
