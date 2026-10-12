@@ -22,3 +22,56 @@ description: Blazemeter GitHub branch and PR conventions — create a unique dat
   If the caller's flow creates the ticket **before** opening the PR (e.g. **mend-blz**), include the
   id in the title at creation — never open untitled and tag after. Only fall back to tagging the
   title after the fact if the calling flow's order genuinely creates the ticket after the PR.
+
+# PR body
+
+Keep **all** of these blocks in order — intro + CVE table, `### Change`, `### Verification`, `Jira:`,
+and (crane only) `### Next step`. Don't drop or rename blocks and don't free-form the structure; the
+only per-run variation is the content inside each block.
+
+```markdown
+## Mend vulnerability remediation — <component>
+
+Fixes <N> Mend SECURITY_VULNERABILITY alerts, all in **<lib> <version>** (<direct dep | transitive via `<parent>`>):
+
+| CVE | Severity | Library | Fix |
+|-----|----------|---------|-----|
+| <CVE-id> | <High|Medium|Low> (CVSS <score>) | <lib> | <from> → <to> |
+
+### Change
+<Golden-rule narrative: which direct dep/BOM was bumped and in which file, how the transitive now
+resolves to the fixed version, and the clean audit result (pip-audit / composer audit / etc.).>
+
+### Verification
+- <✅|❌> **Local:** <N> unit tests pass (<runtime/notes>); <audit tool> on the resolved tree reports no known vulnerabilities.
+- <✅|❌> **Jenkins:** [<JENKINS-FOLDER> build #<n>](<build-url>) — SUCCESS (unit-test · prisms · mend · WhiteSource scan; PUSH_TO_GCR=true, PERFORM_WHITESOURCE_SCAN=true).
+- <✅|❌> **a.blazemeter.com BACKEND-CI:** Harbor `<harbor_php_key>` pinned to `latest-<fix-branch>`; build green.   <!-- [crane only] -->
+- <✅|❌> **denv deploy:** SUCCESS.
+- <✅|⚠️|❌> **denv API tests** (<test file(s)>): <result>.
+
+Jira: <MOB-id>
+
+### Next step   <!-- [crane only] -->
+After this PR merges to `<integration_branch>` and its CI build completes, run:
+
+    /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-id>
+
+to pin the real semantic version in a.blazemeter.com and open its PR.
+```
+
+**Status key** — use consistently: `✅` passed · `⚠️` passed with a known caveat (e.g. a pre-existing
+environmental denv failure confirmed identical on an `integration_branch` baseline — state the caveat
+inline, as in the `denv API tests` line) · `❌` failed.
+
+**Rules:**
+- **Non-crane components:** omit the two `[crane only]` pieces — the `a.blazemeter.com BACKEND-CI`
+  verification bullet **and** the whole `### Next step` section. Keep every other block.
+- **The `Next step` command must be fully substituted and copy-paste-ready** — fill `<component>`,
+  `<fix-branch>`, and `<MOB-id>` with this run's real values, never leaving placeholders:
+
+      /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-id>
+
+  The reader should copy the line and run it without looking anything up. Keep it as an indented
+  code line so it's one-click copyable.
+- Every Verification bullet gets a leading status marker — this is the only change from the prior
+  free-form style; the Fixes/Change/Verification/Jira blocks themselves stay.

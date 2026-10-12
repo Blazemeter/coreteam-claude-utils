@@ -166,7 +166,11 @@ Order: **alerts → branch → fix → local compile+unit-test → push (commits
    so the final commit history is clean. Do not wait for a new CI build — the code is unchanged.
 10. **Open the PR** into `integration_branch` — via **github**. The MOB ticket already exists
    (step 9), so the title carries the `MOB-####` id **from creation** — never tagged on
-   afterward. If `nojira` was set, open the PR without a ticket id in the title.
+   afterward. If `nojira` was set, open the PR without a ticket id in the title. Build the PR
+   **body** from the fixed template in the **github** skill (`# PR body`) — keep all blocks: intro +
+   CVE table → `### Change` → `### Verification` (every bullet prefixed ✅/⚠️/❌) → `Jira:` →
+   **[crane only] `### Next step`** with the fully-substituted, copy-paste-ready `mend-finalize`
+   command. Don't drop blocks or free-form the verification section.
 11. **Update the MOB ticket's description** to add the PR link, now that the PR exists — via
     **jira**. Skip when `nojira` (no ticket to update).
 12. **[Crane repos only] Post the mend-finalize follow-up** — after step 11, output this message
