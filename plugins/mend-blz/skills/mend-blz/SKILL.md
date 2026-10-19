@@ -86,20 +86,17 @@ Order: **alerts → branch → fix → local compile+unit-test → push (commits
     # Fetch current content + SHA (needed for the update)
     FILE_JSON=$(gh api /repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH?ref=<fix-branch>)
     FILE_SHA=$(echo "$FILE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['sha'])")
-    CONTENT=$(echo "$FILE_JSON" | python3 -c "import sys,json,base64; print(base64.b64decode(json.load(sys.stdin)['content']).decode())")
-
-    # Patch: find the block for harbor_php_key and replace its 'version' line
-    # harbor_php_key e.g. RESOURCE_TORERO; fix-branch e.g. mend-fix-20260826-092258
-    PATCHED=$(echo "$CONTENT" | python3 -c "
-    import sys, re
-    src = sys.stdin.read()
-    # Replace 'version' => '...' in the block immediately following RESOURCE_<key>
-    pattern = r\"(HarborRepository::<harbor_php_key>[\\s\\S]*?'version'\\s*=>\\s*')[^']+(')\"\
-    result = re.sub(pattern, r\"\\g<1>latest-<fix-branch>\\g<2>\", src, count=1)
-    print(result, end='')
+    # Patch ONLY harbor_php_key's 'version' line and re-encode in a SINGLE python pass — no bash
+    # command-substitution round-trip (which strips the trailing newline), so the file's exact bytes
+    # (including the EOF newline) are preserved; harbor_php_key e.g. RESOURCE_TORERO.
+    NEW_CONTENT=$(echo "$FILE_JSON" | python3 -c "
+    import sys, json, base64, re
+    text = base64.b64decode(json.load(sys.stdin)['content']).decode()
+    pattern = r\"(HarborRepository::<harbor_php_key>[\\s\\S]*?'version'\\s*=>\\s*')[^']+(')\"
+    patched = re.sub(pattern, r\"\\g<1>latest-<fix-branch>\\g<2>\", text, count=1)
+    assert patched != text, 'version line not matched — check <harbor_php_key>'
+    sys.stdout.write(base64.b64encode(patched.encode()).decode())
     ")
-
-    NEW_CONTENT=$(echo "$PATCHED" | python3 -c "import sys,base64; print(base64.b64encode(sys.stdin.buffer.read()).decode())")
     gh api --method PUT /repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH \
       -f message="<parent_key>: <fix-branch>: pin <harbor_php_key> to latest-<fix-branch>" \
       -f content="$NEW_CONTENT" \
@@ -163,7 +160,12 @@ Order: **alerts → branch → fix → local compile+unit-test → push (commits
    git push --force-with-lease origin <fix-branch>
    ```
    Skip when `nojira`. This replaces the temporary `<parent_key>:` prefix with the child ticket id
-   so the final commit history is clean. Do not wait for a new CI build — the code is unchanged.
+   so the final commit history is clean. The force-push re-triggers CI on the branch; don't block on
+   it — the tree is identical to the already-green pre-squash build (step 6). But **record the
+   post-squash build number and surface it in the summary**, noting: if that build goes red it is
+   environmental/flaky on unchanged code — **re-trigger it, don't fix-forward**. This keeps a flaky
+   post-squash build from silently leaving a red required-check on an otherwise-good PR (as happened
+   once when the squash build flaked while the pre-squash build was green).
 10. **Open the PR** into `integration_branch` — via **github**. The MOB ticket already exists
    (step 9), so the title carries the `MOB-####` id **from creation** — never tagged on
    afterward. If `nojira` was set, open the PR without a ticket id in the title. Build the PR

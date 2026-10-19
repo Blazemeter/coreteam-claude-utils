@@ -49,12 +49,12 @@ resolves to the fixed version, and the clean audit result (pip-audit / composer 
 - <✅|❌> **denv deploy:** SUCCESS.
 - <✅|⚠️|❌> **denv API tests** (<test file(s)>): <result>.
 
-Jira: <MOB-id>
+Jira: <MOB-ticket>
 
 ### Next step   <!-- [crane only] -->
 After this PR merges to `<integration_branch>` and its CI build completes, run:
 
-    /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-id>
+    /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-ticket>
 
 to pin the real semantic version in a.blazemeter.com and open its PR.
 ```
@@ -67,9 +67,9 @@ inline, as in the `denv API tests` line) · `❌` failed.
 - **Non-crane components:** omit the two `[crane only]` pieces — the `a.blazemeter.com BACKEND-CI`
   verification bullet **and** the whole `### Next step` section. Keep every other block.
 - **The `Next step` command must be fully substituted and copy-paste-ready** — fill `<component>`,
-  `<fix-branch>`, and `<MOB-id>` with this run's real values, never leaving placeholders:
+  `<fix-branch>`, and `<MOB-ticket>` with this run's real values, never leaving placeholders:
 
-      /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-id>
+      /orch run mend-finalize --target <component> --scope <fix-branch>,<MOB-ticket>
 
   The reader should copy the line and run it without looking anything up. Keep it as an indented
   code line so it's one-click copyable.

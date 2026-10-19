@@ -81,18 +81,17 @@ FILE_PATH="src/blazemeter/Settings/HarborVersionsSettings.php"
 # Fetch current file + SHA from the fix branch
 FILE_JSON=$(gh api "/repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH?ref=<fix-branch>")
 FILE_SHA=$(echo "$FILE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['sha'])")
-CONTENT=$(echo "$FILE_JSON" | python3 -c "import sys,json,base64; print(base64.b64decode(json.load(sys.stdin)['content']).decode())")
-
-# Replace latest-<fix-branch> with the real semantic version for this component's block
-PATCHED=$(echo "$CONTENT" | python3 -c "
-import sys, re
-src = sys.stdin.read()
-pattern = r\"(HarborRepository::<harbor_php_key>[\s\S]*?'version'\s*=>\s*')[^']+(')\"\
-result = re.sub(pattern, r\"\g<1><version>\g<2>\", src, count=1)
-print(result, end='')
+# Patch ONLY this component's version line and re-encode in a SINGLE python pass — no bash
+# command-substitution round-trip (which strips trailing newlines), so the file's exact bytes
+# (including the trailing newline at EOF) are preserved; only the one version value changes.
+NEW_CONTENT=$(echo "$FILE_JSON" | python3 -c "
+import sys, json, base64, re
+text = base64.b64decode(json.load(sys.stdin)['content']).decode()
+pattern = r\"(HarborRepository::<harbor_php_key>[\s\S]*?'version'\s*=>\s*')[^']+(')\"
+patched = re.sub(pattern, r\"\g<1><version>\g<2>\", text, count=1)
+assert patched != text, 'version line not matched — check <harbor_php_key>/<version>'
+sys.stdout.write(base64.b64encode(patched.encode()).decode())
 ")
-
-NEW_CONTENT=$(echo "$PATCHED" | python3 -c "import sys,base64; print(base64.b64encode(sys.stdin.buffer.read()).decode())")
 
 gh api --method PUT "/repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH" \
   -f message="<ticket>: <fix-branch>: pin <harbor_php_key> to <version>" \
@@ -101,7 +100,28 @@ gh api --method PUT "/repos/Blazemeter/a.blazemeter.com/contents/$FILE_PATH" \
   -f branch="<fix-branch>"
 ```
 
-## 6. Open the a.blazemeter.com PR
+## 6. Sync the fix branch with develop, then open the a.blazemeter.com PR
+
+The fix branch was created back in **phase 1** (mend-blz step 6b) and is often days/weeks behind
+`develop` by the time finalize runs. Merge the current `develop` into it **before** opening the PR so
+the PR diff is **only** the version bump — otherwise the stale merge-base makes GitHub surface
+unrelated changes that already landed on develop (e.g. a Jenkinsfile edit) as three-dot-diff noise.
+No clone needed:
+
+```bash
+# Merge current develop into the fix branch (net-zero for anything already upstream).
+# 201 = merge commit created; 204 = already up to date; 409 = conflict.
+gh api --method POST "/repos/Blazemeter/a.blazemeter.com/merges" \
+  -f base="<fix-branch>" \
+  -f head="develop" \
+  -f commit_message="Merge develop into <fix-branch> before mend-finalize PR" \
+  2>/dev/null || echo "branch already current with develop (or merge conflict — see below)"
+```
+
+If the merge reports a **conflict** (409), stop and report: the fix branch needs a manual rebase onto
+develop before the PR can be clean — do not force anything. Otherwise continue.
+
+Then open the PR:
 
 ```bash
 gh pr create \
