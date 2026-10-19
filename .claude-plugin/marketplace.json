@@ -40,8 +40,8 @@
     {
       "name": "github",
       "source": "./plugins/github",
-      "description": "Blazemeter GitHub branch/PR conventions — dated Docker-safe branch, commit+push via SSO gh, PR into the integration branch, tag PR title with the ticket id (in the title at creation when the ticket already exists), and a fixed PR-body template (intro + CVE table → Change → Verification ✅/⚠️/❌ → Jira → [crane only] copy-paste mend-finalize Next step).",
-      "version": "0.3.0",
+      "description": "Blazemeter GitHub branch/PR conventions — dated Docker-safe branch, commit+push via SSO gh, PR into the integration branch, tag PR title with the ticket id (in the title at creation when the ticket already exists), and a fixed PR-body template (intro + CVE table → Change → Verification ✅/⚠️/❌ → Jira → [crane only] copy-paste mend-finalize Next step, placeholders aligned on <MOB-ticket>).",
+      "version": "0.3.1",
       "keywords": ["github", "pull-request", "branch", "gh"],
       "category": "development"
     },
@@ -57,15 +57,15 @@
       "name": "mend-blz",
       "source": "./plugins/mend-blz",
       "description": "End-to-end Mend remediation recipe — composes mend + dep-remediation + jenkins + github + jira into one loop (alerts → fix → Jenkins green → [crane only] a.blazemeter.com branch → denv deploy + fix-related API tests → Confluence report → Jira created first → PR titled with the ticket id + fixed verification body → Jira description updated with the PR link → [crane only] mend-finalize follow-up message), registry-driven via services.json.",
-      "version": "0.7.3",
+      "version": "0.7.4",
       "keywords": ["mend", "whitesource", "security", "cve", "vulnerabilities", "blazemeter", "recipe"],
       "category": "development"
     },
     {
       "name": "mend-finalize",
       "source": "./plugins/mend-finalize",
-      "description": "Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, fetches the real semantic version, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<branch> to the real version, opens the a.blazemeter.com PR into develop, and updates the MOB ticket. Run after merging the crane PR opened by mend-blz.",
-      "version": "0.1.3",
+      "description": "Phase 2 of the crane Mend flow — after the crane PR merges to the integration branch and the CI build completes, fetches the real semantic version, updates HarborVersionsSettings.php in the a.blazemeter.com branch from latest-<branch> to the real version (single-pass write preserving the EOF newline), syncs the branch with develop so the PR carries only the version bump, opens the a.blazemeter.com PR into develop, and updates the MOB ticket. Run after merging the crane PR opened by mend-blz.",
+      "version": "0.1.4",
       "keywords": ["mend", "crane", "harbor", "version", "blazemeter", "finalize"],
       "category": "development"
     },
