@@ -1,0 +1,8 @@
+{
+  "name": "mend-reverify",
+  "description": "Re-run the denv API-test gate for a Mend remediation ticket and update the ticket if it now passes. For when the mend-blz denv API-test gate failed on environmental flakiness (pod/agent recycled, engine-start timeout, intermittent 400/500) and the fix is actually good: deploys the ticket's fix branch to the svc-automation denv if it isn't already deployed, re-runs API-TEST-SELECTED-DEV-ENV for the component's api_tests against that denv, and on green comments on the MOB ticket and flips its denv-API-test verification line to passed (on a failed deploy or red run it reports and leaves the ticket untouched). Triggered by /orch run mend-reverify --target <component> --scope <MOB-ticket>[,<PR>].",
+  "version": "0.1.0",
+  "author": { "name": "Surabhi" },
+  "license": "MIT",
+  "keywords": ["mend", "denv", "api-test", "reverify", "retry", "blazemeter"]
+}
