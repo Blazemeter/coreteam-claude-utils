@@ -70,6 +70,14 @@
       "category": "development"
     },
     {
+      "name": "mend-reverify",
+      "source": "./plugins/mend-reverify",
+      "description": "Re-run the denv API-test gate for a Mend remediation ticket and update the ticket if it now passes — for when the mend-blz denv gate failed on environmental flakiness (recycled pod/agent, engine-start timeout, intermittent 400/500) and the fix is good. Deploys the ticket's fix branch to the svc-automation denv if not already deployed, then re-runs API-TEST-SELECTED-DEV-ENV for the component's api_tests against that denv; on green comments on the MOB ticket and flips its denv-API-test line to passed; on a failed deploy or red run reports and leaves the ticket untouched. Triggered by /orch run mend-reverify --target <component> --scope <MOB-ticket>[,<PR>].",
+      "version": "0.1.0",
+      "keywords": ["mend", "denv", "api-test", "reverify", "retry", "blazemeter"],
+      "category": "development"
+    },
+    {
       "name": "opensearch",
       "source": "./plugins/opensearch",
       "description": "Search BlazeMeter logs across denv/bzdev/ci/staging/prod — bundles a read-only opensearch-reader MCP server plus a skill that builds safe Lucene queries and condenses results.",
