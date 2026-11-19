@@ -28,10 +28,19 @@ Ids below are the known MOB values — treat them as config the caller may overr
   (the repo's short name, e.g. `Fix Mend vulnerabilities a.blazemeter.com` — not the component
   alias).
 - **Description at creation time** (the ticket is created **before** the PR exists — see
-  "Updating after the PR exists" below — so there is no PR link yet), in this order:
+  "Updating after the PR exists" below — so there is no PR link yet), in this order. The ticket is
+  the record people read **without opening the PR**, so it must carry the same facts as the PR body —
+  don't shrink it to a bare list:
   1. Dependencies fixed — one line each `library: <from> → <to>` + severity/CVE.
-  2. **Jenkins build link.**
-  3. **Confluence tracking-page link** — only when the caller reports deferred/unfixed items (e.g.
+  2. **Jenkins build link** + its result; for crane repos also the a.blazemeter.com BACKEND-CI
+     build link + result.
+  3. **Verification** — the caller's fix-verification evidence, mirroring the PR body's
+     `### Verification` section so the ticket stands alone. For mend-blz: the denv **deploy** result
+     and the fix-related **API-test** result (job link + tests-run / pass-fail counts), and call out
+     any transient failure that passed on a clean rerun. Say "deploy-only" when the caller ran
+     deploy-only (empty `api_tests`, e.g. scaleron); omit this item only when the caller supplies no
+     verification evidence at all.
+  4. **Confluence tracking-page link** — only when the caller reports deferred/unfixed items (e.g.
      mend-blz's Confluence report step); omit this line entirely when there's nothing deferred or
      the caller skipped that report. The page must already reflect the current run before this
      ticket is created — create the ticket *after* the caller's Confluence write, not before.
@@ -44,8 +53,8 @@ Once the caller opens the PR (which carries this ticket's id in its title from c
 **github** skill), it calls back into this skill to add the **PR link** to the ticket description:
 read the current description and insert the PR link as its own line directly after "Dependencies
 fixed" and before the Jenkins build link — i.e. the final description reads dependencies → PR link
-→ Jenkins link → Confluence link (if any), even though PR and Jenkins were written in the opposite
-order. Jira's API requires the full description field on update, so re-send the whole text with the
+→ Jenkins link → Verification → Confluence link (if any), even though PR and Jenkins were written in
+the opposite order. Jira's API requires the full description field on update, so re-send the whole text with the
 line inserted — don't assume a partial-append endpoint. Skip this step entirely under `nojira`
 (there is no ticket) or if the PR never got opened (e.g. the flow stopped before that step).
 

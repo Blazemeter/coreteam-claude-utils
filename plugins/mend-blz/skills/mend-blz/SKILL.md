@@ -16,7 +16,7 @@ composer — the reusable knowledge lives in five skills it drives:
 | [Crane repos only] Via GitHub API (no clone): create matching branch in `a.blazemeter.com`, patch `HarborVersionsSettings.php` version to `latest-<fix-branch>`, commit | this skill (step 6b) |
 | Deploy the branch's image to denv, then run the fix-related API tests against it and gate on them | **jenkins** |
 | Upsert currently-unfixable libraries to the Confluence tracking page | this skill (see [references/mend-confluence-report.md](references/mend-confluence-report.md)) |
-| Create the MOB ticket (In Progress, assignee = owner) **before the PR exists** — description covers dependencies fixed + Jenkins + Confluence link when deferred alerts exist | **jira** |
+| Create the MOB ticket (In Progress, assignee = owner) **before the PR exists** — description covers dependencies fixed + Jenkins + the step-7 denv deploy & API-test verification + Confluence link when deferred alerts exist, mirroring the PR body so the ticket stands alone | **jira** |
 | Squash all commits to one with child ticket id, force-push, open PR **with the ticket id already in the title** (commits used `parent_key` prefix during CI to satisfy the Jira-id-in-commit check) | **github** |
 | Edit the MOB ticket's description to add the PR link, now that the PR exists | **jira** |
 
@@ -148,10 +148,15 @@ Order: **alerts → branch → fix → local compile+unit-test → push (commits
    orchestrator-created ticket is filterable via `labels = mend_orch`); jira owns project/board/
    fields/status — this recipe only supplies the ticket's name, label, and description content.
    Created **before**
-   the PR exists, so the description at this point covers dependencies fixed and the Jenkins build
-   link; if step 8 reported any deferred/unfixed alerts, it also links to the Confluence page (see
-   the **jira** skill's description ordering) — omit that line if step 8 had nothing to report or
-   was skipped via `noconfluence`. It cannot yet include a PR link (see step 11).
+   the PR exists, so the description at this point covers dependencies fixed, the Jenkins build link
+   (plus the a.blazemeter.com BACKEND-CI link for crane repos), and the **step-7 denv verification** —
+   the denv deploy result and the fix-related API-test result (job link + tests-run / pass-fail
+   counts, noting any transient failure that passed on a clean rerun; "deploy-only" when `api_tests`
+   is empty). Supply the same verification facts you put in the PR body's `### Verification` section
+   so the ticket mirrors the PR and stands alone. If step 8 reported any deferred/unfixed alerts, it
+   also links to the Confluence page (see the **jira** skill's description ordering) — omit that line
+   if step 8 had nothing to report or was skipped via `noconfluence`. It cannot yet include a PR link
+   (see step 11).
 9.5. **Squash commits and update to child ticket id** — now that the child ticket exists, squash all
    commits on the fix branch into one and update the commit message to use the child ticket id:
    ```bash
