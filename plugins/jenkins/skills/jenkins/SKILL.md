@@ -84,10 +84,14 @@ just deployed. This is a **targeted** selected-tests run and is **distinct from*
 **Job:** `job/API-TEST-SELECTED-DEV-ENV`
 
 ```
-POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildWithParameters?TARGET_ENV=DEnv&TESTS_TO_RUN=<first-test-relative-path>&TESTS_TO_RUN_MANUAL=<space-separated test files>&API_TESTING_BRANCH=develop&SDK_BRANCH=master
+POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildWithParameters?TARGET_ENV=<denv-env-name>&TESTS_TO_RUN=<first-test-relative-path>&TESTS_TO_RUN_MANUAL=<space-separated test files>&API_TESTING_BRANCH=develop&SDK_BRANCH=master
 ```
 
-- **`TARGET_ENV=DEnv`** — run against the denv environment (the one deployed above).
+- **`TARGET_ENV=<denv-env-name>`** — the **name of the denv env** to run against: the **same value as
+  the deploy step's `USERNAME`** (= `JENKINS_USER`; `svc-automation` for the orchestrator, or a
+  person's own denv like `kasatsurabhi` for a manual run). Do **not** pass the literal string `DEnv`
+  — it is not a real env; the job runs against the env named here, so it must match the env you
+  deployed to above.
 - **`TESTS_TO_RUN_MANUAL`** — space-separated `api_testing/tests/…` paths. When driven by a flow,
   use the **caller's per-repo test list** verbatim (e.g. mend passes the component's `api_tests`
   from the catalog) rather than guessing paths. Standalone, pick the file(s) matching the fixed
