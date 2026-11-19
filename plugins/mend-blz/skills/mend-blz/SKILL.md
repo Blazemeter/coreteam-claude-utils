@@ -120,7 +120,7 @@ Order: **alerts → branch → fix → local compile+unit-test → push (commits
        the shared denv deploy job with the **fix branch you pushed** (`GIRO_BRANCH`) and gate on it
        going green (the image starts/runs in denv).
    (b) **Functionally verify** the fix — run this component's API tests against that denv env
-       (`API-TEST-SELECTED-DEV-ENV`, `TARGET_ENV=DEnv`), and gate on them passing. Use the
+       (`API-TEST-SELECTED-DEV-ENV`, `TARGET_ENV=svc-automation`), and gate on them passing. Use the
        component's **`api_tests`** list from the catalog entry (passed in the target config) as
        `TESTS_TO_RUN_MANUAL`, verbatim — it is the curated, per-repo set (don't guess paths). **If
        `api_tests` is empty** (e.g. scaleron), **skip this API-test gate** and rely on the deploy

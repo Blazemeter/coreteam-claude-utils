@@ -89,16 +89,16 @@ ticket).
 Now re-run the API tests (no rebuild) against the svc-automation denv:
 
 ```
-POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildWithParameters?TARGET_ENV=DEnv&TESTS_TO_RUN=<first-test-relative-path>&TESTS_TO_RUN_MANUAL=<space-separated api_testing/tests/… paths>&API_TESTING_BRANCH=develop&SDK_BRANCH=master
+POST https://blazect-jenkins.blazemeter.com/job/API-TEST-SELECTED-DEV-ENV/buildWithParameters?TARGET_ENV=svc-automation&TESTS_TO_RUN=<first-test-relative-path>&TESTS_TO_RUN_MANUAL=<space-separated api_testing/tests/… paths>&API_TESTING_BRANCH=develop&SDK_BRANCH=master
 ```
 
 - `TESTS_TO_RUN_MANUAL` = the component's `api_tests`, space-separated, verbatim (the curated set —
   don't guess paths).
 - `TESTS_TO_RUN` = the first `api_tests` entry with the `api_testing/tests/` prefix removed.
-- **No `USERNAME` param here** — unlike the deploy job, the API-test job has no `USERNAME` parameter;
-  it derives the denv from **`BUILD_USER`** (the authenticating Jenkins account). Because the
-  orchestrator runs as **svc-automation**, `BUILD_USER = JENKINS_USER = svc-automation`, so it runs
-  against the svc-automation denv automatically — the same account/env as the step-2 deploy.
+- **`TARGET_ENV=svc-automation`** names the denv to run against — the svc-automation denv deployed in
+  step 2. The job runs against the env named in `TARGET_ENV`; pass `svc-automation` explicitly (there
+  is no `USERNAME` param on this job). The orchestrator runs as **svc-automation**
+  (`BUILD_USER = JENKINS_USER = svc-automation`), so this also matches the step-2 deploy's env.
 
 Follow the **jenkins** skill to turn the queue item into the specific triggered build number and poll
 **that** build (not `lastBuild`, which races). This is a **single run** — do not auto-retry.
