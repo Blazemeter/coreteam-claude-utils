@@ -23,6 +23,11 @@ To wire up a new environment, set these env vars in .mcp.json's opensearch-reade
 
 denv/bzdev instead read the unsuffixed OPENSEARCH_HOST/OPENSEARCH_USER/OPENSEARCH_PASSWORD
 (kept for backwards compatibility with the original single-host setup).
+
+Every setting is looked up first in ~/.config/opensearch.env (KEY=value lines; `export`,
+quotes and # comments allowed), then in the process environment. The file exists for the
+Claude desktop app: it starts MCP servers without sourcing ~/.zshrc, so the ${VAR}
+placeholders in .mcp.json expand to empty strings there. The file is read once at startup.
 """
 
 import json
@@ -31,9 +36,43 @@ import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-_LEGACY_HOST = os.environ.get("OPENSEARCH_HOST", "https://opensearch-dev.blazemeter.net").rstrip("/")
-_LEGACY_USER = os.environ.get("OPENSEARCH_USER", "")
-_LEGACY_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", "")
+ENV_FILE = os.path.join(os.path.expanduser("~"), ".config", "opensearch.env")
+
+
+def _load_env_file(path: str) -> dict:
+    """Parse KEY=value lines; a missing file yields no values."""
+    values = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        return values
+
+    for line in lines:
+        line = line.strip()
+        if line.startswith("export "):
+            line = line[len("export "):].lstrip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+            value = value[1:-1]
+        values[key.strip()] = value
+    return values
+
+
+_FILE_SETTINGS = _load_env_file(ENV_FILE)
+
+
+def _setting(name: str, default: str = "") -> str:
+    """The env file wins; an unset or empty env var (the desktop-app case) falls through."""
+    return _FILE_SETTINGS.get(name) or os.environ.get(name) or default
+
+
+_LEGACY_HOST = _setting("OPENSEARCH_HOST", "https://opensearch-dev.blazemeter.net").rstrip("/")
+_LEGACY_USER = _setting("OPENSEARCH_USER")
+_LEGACY_PASSWORD = _setting("OPENSEARCH_PASSWORD")
 
 ENVIRONMENTS = {
     "denv": {"index_pattern": "logstash-denv*"},
@@ -64,20 +103,20 @@ def _resolve_environment(environment: str) -> dict:
         host, user, password = _LEGACY_HOST, _LEGACY_USER, _LEGACY_PASSWORD
     else:
         suffix = env.upper()
-        host = os.environ.get(f"OPENSEARCH_HOST_{suffix}", "").rstrip("/")
-        user = os.environ.get(f"OPENSEARCH_USER_{suffix}", "")
-        password = os.environ.get(f"OPENSEARCH_PASSWORD_{suffix}", "")
+        host = _setting(f"OPENSEARCH_HOST_{suffix}").rstrip("/")
+        user = _setting(f"OPENSEARCH_USER_{suffix}")
+        password = _setting(f"OPENSEARCH_PASSWORD_{suffix}")
 
     if not host or not user or not password:
         raise ValueError(
             f"OpenSearch for environment '{env}' is not configured yet — no host/credentials "
             f"wired in. Currently only 'denv' and 'bzdev' are set up (single dev cluster: "
             f"{_LEGACY_HOST}). To add '{env}', set OPENSEARCH_HOST_{env.upper()}/"
-            f"OPENSEARCH_USER_{env.upper()}/OPENSEARCH_PASSWORD_{env.upper()} in .mcp.json's "
-            f"opensearch-reader env block."
+            f"OPENSEARCH_USER_{env.upper()}/OPENSEARCH_PASSWORD_{env.upper()} in {ENV_FILE} "
+            f"or export them before starting Claude Code."
         )
 
-    index_pattern = os.environ.get(f"OPENSEARCH_INDEX_{env.upper()}", cfg["index_pattern"])
+    index_pattern = _setting(f"OPENSEARCH_INDEX_{env.upper()}", cfg["index_pattern"])
     return {"host": host, "auth": (user, password), "index_pattern": index_pattern, "caveat": cfg.get("caveat")}
 
 

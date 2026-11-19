@@ -18,9 +18,24 @@ opensearch/
 
 ## Prerequisites
 
-Export OpenSearch credentials in your shell **before** starting Claude Code — the
-bundled MCP server reads them from its environment via `.mcp.json`'s `${VAR}`
-substitution:
+Put OpenSearch credentials in `~/.config/opensearch.env`, or export them in your
+shell **before** starting Claude Code. The bundled MCP server checks the file first
+and falls back to its environment (filled in by `.mcp.json`'s `${VAR}` substitution).
+
+**Using the Claude desktop app?** Use the file. The app starts MCP servers without
+sourcing `~/.zshrc`, so exported variables never reach the server and every
+environment reports "not configured". The file takes the same `KEY=value` lines
+(`export` prefixes, quotes and `#` comments are fine), so you can copy them from
+your shell profile:
+
+```bash
+# ~/.config/opensearch.env
+export OPENSEARCH_HOST_PROD="https://..."
+export OPENSEARCH_USER_PROD="<read-only-username>"
+export OPENSEARCH_PASSWORD_PROD="<read-only-password>"
+```
+
+Keep it private (`chmod 600 ~/.config/opensearch.env`).
 
 | Env var | Required for |
 |---|---|
@@ -56,8 +71,8 @@ the other three environments:
    # optional — override the default index pattern:
    export OPENSEARCH_INDEX_STAGING="logstash-staging*"
    ```
-   Same pattern with `_PROD` or `_CI` in place of `_STAGING`. Put these in your
-   shell profile or a secrets-manager-backed env loader (e.g. `direnv`,
+   Same pattern with `_PROD` or `_CI` in place of `_STAGING`. Put these in
+   `~/.config/opensearch.env` (required for the desktop app), your shell profile or a secrets-manager-backed env loader (e.g. `direnv`,
    1Password CLI) — **never** commit real values anywhere in this repo, and never
    paste them into `.mcp.json`, `SKILL.md`, or chat.
 4. **Default index patterns** if you don't override them: `logstash-ci*`,
@@ -65,7 +80,7 @@ the other three environments:
    actual index naming before relying on results — if they don't, set
    `OPENSEARCH_INDEX_<ENV>` explicitly.
 5. **Restart Claude Code** (or `/reload-plugins`) — the MCP server only reads
-   these env vars once, at process start.
+   the env file and env vars once, at process start.
 6. **Verify** by asking Claude to `ping opensearch for staging` (or `prod`/`ci`).
    Expect `{"status": "connected", ...}`. If you still get a "not configured"
    error, double-check the exact var names above — a typo'd suffix silently
